@@ -43,7 +43,9 @@ async def test_report_invalid_source(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_report_store_error_returns_400(client: AsyncClient, blocker_store_mock: AsyncMock) -> None:
+async def test_report_store_error_returns_400(
+    client: AsyncClient, blocker_store_mock: AsyncMock
+) -> None:
     blocker_store_mock.report.side_effect = RuntimeError("db failure")
     payload = {"participant_id": "usr_alice", "description": "Blocked", "source": "manual"}
     response = await client.post("/api/blocker/report", headers=AUTH, json=payload)
@@ -83,7 +85,9 @@ async def test_update_not_found(client: AsyncClient, blocker_store_mock: AsyncMo
 
 
 @pytest.mark.asyncio
-async def test_update_store_error_returns_400(client: AsyncClient, blocker_store_mock: AsyncMock) -> None:
+async def test_update_store_error_returns_400(
+    client: AsyncClient, blocker_store_mock: AsyncMock
+) -> None:
     blocker_store_mock.update.side_effect = RuntimeError("Unexpected")
     response = await client.post(
         "/api/blocker/some-key/update",
@@ -125,7 +129,9 @@ async def test_list_active_no_filter(client: AsyncClient, blocker_store_mock: As
 
 
 @pytest.mark.asyncio
-async def test_list_active_filter_by_sprint_id(client: AsyncClient, blocker_store_mock: AsyncMock) -> None:
+async def test_list_active_filter_by_sprint_id(
+    client: AsyncClient, blocker_store_mock: AsyncMock
+) -> None:
     response = await client.get("/api/blockers/active?sprint_id=sprint-7", headers=AUTH)
     assert response.status_code == 200
     blocker_store_mock.list_active.assert_awaited_once_with(
@@ -135,7 +141,9 @@ async def test_list_active_filter_by_sprint_id(client: AsyncClient, blocker_stor
 
 
 @pytest.mark.asyncio
-async def test_list_active_filter_by_participant_id(client: AsyncClient, blocker_store_mock: AsyncMock) -> None:
+async def test_list_active_filter_by_participant_id(
+    client: AsyncClient, blocker_store_mock: AsyncMock
+) -> None:
     response = await client.get("/api/blockers/active?participant_id=usr_alice", headers=AUTH)
     assert response.status_code == 200
     blocker_store_mock.list_active.assert_awaited_once_with(

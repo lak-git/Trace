@@ -21,7 +21,9 @@ def _participant(plane_user_id: str, name: str, role: ParticipantRole) -> Partic
 
 
 @pytest.mark.asyncio
-async def test_upsert_valid_developer(client: AsyncClient, participant_store_mock: AsyncMock) -> None:
+async def test_upsert_valid_developer(
+    client: AsyncClient, participant_store_mock: AsyncMock
+) -> None:
     expected = _participant("usr_dev", "Dev User", ParticipantRole.DEVELOPER)
     participant_store_mock.upsert.return_value = expected
     payload = {
@@ -94,7 +96,9 @@ async def test_upsert_store_raises_propagates_400(
 
 
 @pytest.mark.asyncio
-async def test_list_returns_empty_list(client: AsyncClient, participant_store_mock: AsyncMock) -> None:
+async def test_list_returns_empty_list(
+    client: AsyncClient, participant_store_mock: AsyncMock
+) -> None:
     participant_store_mock.list_active.return_value = []
     response = await client.get("/api/participants", headers=AUTH)
     assert response.status_code == 200
@@ -102,7 +106,9 @@ async def test_list_returns_empty_list(client: AsyncClient, participant_store_mo
 
 
 @pytest.mark.asyncio
-async def test_list_returns_participants(client: AsyncClient, participant_store_mock: AsyncMock) -> None:
+async def test_list_returns_participants(
+    client: AsyncClient, participant_store_mock: AsyncMock
+) -> None:
     participant_store_mock.list_active.return_value = [
         _participant("usr_1", "Alice", ParticipantRole.DEVELOPER),
         _participant("usr_2", "Bob", ParticipantRole.BA),
@@ -131,7 +137,9 @@ async def test_store_upsert_calls_supabase() -> None:
     client = SimpleNamespace(table=MagicMock(return_value=table))
     store = ParticipantStore(client)  # type: ignore[arg-type]
 
-    payload = ParticipantUpsert(plane_user_id="usr_1", display_name="Alice", role=ParticipantRole.DEVELOPER)
+    payload = ParticipantUpsert(
+        plane_user_id="usr_1", display_name="Alice", role=ParticipantRole.DEVELOPER
+    )
     await store.upsert(payload)
 
     client.table.assert_called_once_with("participants")

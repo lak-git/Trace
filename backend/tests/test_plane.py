@@ -32,8 +32,12 @@ async def test_cycle_update_missing_summary_text(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_cycle_update_plane_error_returns_400(client: AsyncClient, plane_client_mock: AsyncMock) -> None:
-    request = httpx.Request("PATCH", "https://api.plane.so/api/v1/workspaces/x/projects/p/cycles/c/")
+async def test_cycle_update_plane_error_returns_400(
+    client: AsyncClient, plane_client_mock: AsyncMock
+) -> None:
+    request = httpx.Request(
+        "PATCH", "https://api.plane.so/api/v1/workspaces/x/projects/p/cycles/c/"
+    )
     response = httpx.Response(status_code=500, request=request)
     plane_client_mock.append_cycle_description.side_effect = httpx.HTTPStatusError(
         "Plane failed",
@@ -53,7 +57,10 @@ def test_workspace_path_construction() -> None:
         workspace_slug="workspace-slug",
         project_id="project-id",
     )
-    assert client._workspace_path("projects/pid/cycles/") == "/workspaces/workspace-slug/projects/pid/cycles/"
+    assert (
+        client._workspace_path("projects/pid/cycles/")
+        == "/workspaces/workspace-slug/projects/pid/cycles/"
+    )
 
 
 @pytest.mark.asyncio

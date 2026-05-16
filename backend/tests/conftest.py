@@ -15,7 +15,6 @@ from app.api.deps import (
     get_plane_client,
 )
 from app.core.config import get_settings
-from app.main import create_app
 from app.model.blocker import Blocker, BlockerSource, BlockerStatus
 from app.model.memory import CompactedSprintMemory, MemoryCompactResponse
 from app.model.participant import Participant, ParticipantRole
@@ -148,6 +147,8 @@ async def client(
     gemini_client_mock: AsyncMock,
     plane_client_mock: AsyncMock,
 ) -> AsyncGenerator[AsyncClient]:
+    from app.main import create_app
+
     app = create_app()
     app.state.supabase = MagicMock()
     app.dependency_overrides[get_participant_store] = lambda: participant_store_mock

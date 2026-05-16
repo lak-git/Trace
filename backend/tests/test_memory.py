@@ -28,7 +28,9 @@ async def test_compact_empty_transcript(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_compact_gemini_error_returns_400(client: AsyncClient, gemini_client_mock: AsyncMock) -> None:
+async def test_compact_gemini_error_returns_400(
+    client: AsyncClient, gemini_client_mock: AsyncMock
+) -> None:
     gemini_client_mock.compact_standup_segment.side_effect = RuntimeError("gemini failed")
     payload = {"sprint_id": "sprint-7", "transcript": "Anything"}
     response = await client.post("/api/memory/compact", headers=AUTH, json=payload)
@@ -89,7 +91,9 @@ async def test_upsert_missing_standup_date(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_upsert_store_error_returns_400(client: AsyncClient, memory_store_mock: AsyncMock) -> None:
+async def test_upsert_store_error_returns_400(
+    client: AsyncClient, memory_store_mock: AsyncMock
+) -> None:
     memory_store_mock.upsert_memory.side_effect = RuntimeError("store fail")
     payload = {
         "participant_id": "usr_alice",
@@ -104,7 +108,9 @@ async def test_upsert_store_error_returns_400(client: AsyncClient, memory_store_
 
 
 @pytest.mark.asyncio
-async def test_get_blob_returns_compacted_memory(client: AsyncClient, memory_store_mock: AsyncMock) -> None:
+async def test_get_blob_returns_compacted_memory(
+    client: AsyncClient, memory_store_mock: AsyncMock
+) -> None:
     response = await client.get("/api/memory/sprint-7", headers=AUTH)
     assert response.status_code == 200
     payload = response.json()["data"]
@@ -114,7 +120,9 @@ async def test_get_blob_returns_compacted_memory(client: AsyncClient, memory_sto
 
 
 @pytest.mark.asyncio
-async def test_get_blob_store_error_returns_400(client: AsyncClient, memory_store_mock: AsyncMock) -> None:
+async def test_get_blob_store_error_returns_400(
+    client: AsyncClient, memory_store_mock: AsyncMock
+) -> None:
     memory_store_mock.sprint_blob.side_effect = RuntimeError("blob failure")
     response = await client.get("/api/memory/sprint-7", headers=AUTH)
     assert response.status_code == 400
