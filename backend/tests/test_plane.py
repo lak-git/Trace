@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 from httpx import AsyncClient
+from tenacity import Future, RetryError
 
 from app.model.plane import PlaneCycle
 from app.service.plane_client import PlaneClient
@@ -109,4 +110,37 @@ async def test_append_description_when_no_existing() -> None:
 
     assert result.description == "only new text"
     assert mocked.await_args.kwargs["json"]["description"] == "only new text"
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_append_description_when_get_cycle_404() -> None:
+    client = PlaneClient(
+        base_url="https://api.plane.so/api/v1",
+        api_token="plane_api_test",
+        workspace_slug="workspace-slug",
+        project_id="project-id",
+    )
+    request = httpx.Request(
+        "GET",
+        "https://api.plane.so/api/v1/workspaces/workspace-slug/projects/project-id/cycles/c1/",
+    )
+    response = httpx.Response(404, request=request)
+    http_err = httpx.HTTPStatusError("not found", request=request, response=response)
+    attempt = Future(attempt_number=3)
+    attempt.set_exception(http_err)
+
+    with patch.object(
+        client,
+        "get_cycle",
+        new=AsyncMock(side_effect=RetryError(attempt)),
+    ):
+        with patch.object(client, "_request", new=AsyncMock(return_value={"id": "c1"})) as mocked:
+            result = await client.append_cycle_description(
+                cycle_id="c1",
+                summary_text="standup line",
+            )
+
+    assert result.description == "standup line"
+    assert mocked.await_args.kwargs["json"]["description"] == "standup line"
     await client.aclose()

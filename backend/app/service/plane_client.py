@@ -5,7 +5,7 @@ from email.utils import parsedate_to_datetime
 from typing import Any
 
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import RetryError, retry, stop_after_attempt, wait_exponential
 
 from app.model.plane import CycleUpdateResult, PlaneCycle, PlaneMember
 
@@ -116,6 +116,25 @@ class PlaneClient:
             )
         return members
 
+    async def _fetch_cycle_description_or_empty(
+        self,
+        cycle_id: str,
+        project_id: str,
+    ) -> str:
+        try:
+            cycle = await self.get_cycle(cycle_id=cycle_id, project_id=project_id)
+            return cycle.description or ""
+        except RetryError as retry_err:
+            last = retry_err.last_attempt
+            exc = last.exception() if hasattr(last, "exception") else last
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
+                logger.warning(
+                    "Plane GET cycle %s returned 404; appending summary without prior text",
+                    cycle_id,
+                )
+                return ""
+            raise
+
     async def append_cycle_description(
         self,
         cycle_id: str,
@@ -123,8 +142,7 @@ class PlaneClient:
         project_id: str | None = None,
     ) -> CycleUpdateResult:
         pid = project_id or self._project_id
-        cycle = await self.get_cycle(cycle_id=cycle_id, project_id=pid)
-        current = cycle.description or ""
+        current = await self._fetch_cycle_description_or_empty(cycle_id, pid)
         description = f"{current.rstrip()}\n\n{summary_text.strip()}".strip()
         payload = await self._request(
             "PATCH",
