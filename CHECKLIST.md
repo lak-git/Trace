@@ -15,8 +15,10 @@
 
 ### 0.2 — Supabase
 - [ ] Create Supabase project (region: ap-southeast-1)
-- [ ] Copy pooler connection string
-- [ ] Run SQL to create 4 tables:
+- [ ] From Project Settings -> API, copy `Project URL`, `anon` key, `service_role` key
+- [ ] From Project Settings -> Database -> Connection pooling, copy the port-5432 string
+- [ ] Run [backend/migrations/001_initial.sql](backend/migrations/001_initial.sql) in the SQL editor; verify all 5 tables exist:
+  - [ ] `participants`
   - [ ] `standup_context`
   - [ ] `agent_memory`
   - [ ] `blockers`
@@ -48,7 +50,7 @@
 
 ### 0.7 — Environment Variables
 - [ ] Copy `.env.agent.example` → `.env.agent`
-- [ ] Fill in all 12 variables with real values
+- [ ] Fill in all values (incl. `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DATABASE_URL`)
 - [ ] Verify `.env.agent` is in `.gitignore`
 
 ---
@@ -58,7 +60,7 @@
 
 ### 1.1 — Project Structure
 - [ ] Create `backend/` directory tree
-- [ ] Create `backend/pyproject.toml` (deps: `fastapi`, `uvicorn`, `httpx`, `asyncpg`, `pydantic-settings`, `google-genai`, `python-dotenv`)
+- [ ] Create `backend/pyproject.toml` (deps: `fastapi`, `uvicorn[standard]`, `httpx`, `tenacity`, `pydantic`, `pydantic-settings`, `supabase>=2.4`, `google-genai`, `python-slugify`, `tzdata`)
 - [ ] Run `uv sync` — installs all dependencies
 - [ ] Create `backend/app/__init__.py`
 
@@ -66,31 +68,37 @@
 - [ ] `backend/app/core/__init__.py`
 - [ ] `backend/app/core/config.py` — load env vars via `pydantic-settings`
 - [ ] `backend/app/core/auth.py` — `X-Agent-Secret` dependency
-- [ ] `backend/app/core/deps.py` — reusable FastAPI dependencies
-- [ ] `backend/app/database.py` — async Supabase connection pool
+- [ ] `backend/app/api/deps.py` — reusable FastAPI dependencies (auth, supabase)
+- [ ] `backend/app/database.py` — async Supabase client (`create_async_client`) initialised in lifespan, exposed via `get_supabase()` dependency
+- [ ] Run [backend/migrations/001_initial.sql](backend/migrations/001_initial.sql) in Supabase SQL editor
 
 ### 1.3 — Pydantic Models
 - [ ] `backend/app/model/__init__.py`
-- [ ] `backend/app/model/standup.py` — StandupContext, CompiledContext
-- [ ] `backend/app/model/memory.py` — AgentMemory, MemoryUpsert
-- [ ] `backend/app/model/blocker.py` — BlockerCreate, BlockerResponse
+- [ ] `backend/app/model/participant.py` — Participant, ParticipantRole, ParticipantUpsert
+- [ ] `backend/app/model/standup.py` — StandupContext, CompiledContext, ParticipantContext
+- [ ] `backend/app/model/memory.py` — AgentMemory, MemoryUpsert, CompactedSprintMemory
+- [ ] `backend/app/model/blocker.py` — Blocker, BlockerReport, BlockerUpdate, BlockerResolve
 - [ ] `backend/app/model/plane.py` — PlaneMember, PlaneCycle, PlaneIssue
 
 ### 1.4 — Service Layer
 - [ ] `backend/app/service/__init__.py`
-- [ ] `backend/app/service/plane_client.py` — typed async Plane API client with rate-limit throttle (60 req/min)
-- [ ] `backend/app/service/github_client.py` — fetch commits per user by email since timestamp
-- [ ] `backend/app/service/memory_store.py` — read/write/upsert agent_memory and standup_context
-- [ ] `backend/app/service/standup_context.py` — compile per-member context (commits + blockers + last summary)
+- [ ] `backend/app/service/plane_client.py` — typed async Plane API client with rate-limit throttle (60 req/min), tenacity retries
+- [ ] `backend/app/service/github_client.py` — fetch commits per github_login (or email fallback) since timestamp
+- [ ] `backend/app/service/gemini_client.py` — Gemini compaction via `google-genai`, bounded `max_output_tokens`
+- [ ] `backend/app/service/participant_store.py` — CRUD on `participants` via Supabase SDK
+- [ ] `backend/app/service/blocker_store.py` — CRUD on `blockers` via Supabase SDK
+- [ ] `backend/app/service/memory_store.py` — upsert `agent_memory`, `standup_context`, `sprint_memory` via Supabase SDK
+- [ ] `backend/app/service/standup_context.py` — role-aware compile of per-member context (Developer = commits + blockers + last memory; BA/QA = blockers + last memory)
 
 ### 1.5 — API Endpoints
 - [ ] `backend/app/api/__init__.py`
 - [ ] `backend/app/api/endpoints/__init__.py`
-- [ ] `backend/app/api/endpoints/health.py` — `GET /api/health`
+- [ ] `backend/app/api/endpoints/health.py` — `GET /api/health` (no auth)
+- [ ] `backend/app/api/endpoints/participant.py` — `POST /api/participants`, `GET /api/participants`
 - [ ] `backend/app/api/endpoints/context.py` — `GET /api/context/prefetch`
 - [ ] `backend/app/api/endpoints/memory.py` — `POST /api/memory/compact`, `POST /api/memory/upsert`, `GET /api/memory/{sprint_id}`
 - [ ] `backend/app/api/endpoints/plane.py` — `POST /api/plane/cycle-update`
-- [ ] `backend/app/api/endpoints/blocker.py` — `POST /api/blocker/report`, `GET /api/blockers/active`
+- [ ] `backend/app/api/endpoints/blocker.py` — `POST /api/blocker/report`, `POST /api/blocker/{key}/update`, `POST /api/blocker/{key}/resolve`, `GET /api/blockers/active`
 
 ### 1.6 — App Entry & Router
 - [ ] `backend/app/main.py` — FastAPI app creation, include routers, CORS, lifespan

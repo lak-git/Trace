@@ -37,7 +37,7 @@
     "editor.formatOnSave": true
   },
 
-  "python.languageServer": "Pylance",
+  "python.languageServer": "None",
 
   "ruff.enable": true,
   "ruff.organizeImports": true,

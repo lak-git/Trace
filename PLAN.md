@@ -49,15 +49,16 @@ A standalone AI Scrum Master agent that automates repetitive tracking and commun
 ├── backend/
 │   ├── app/
 │   │   ├── api/endpoints/     # FastAPI route handlers
-│   │   ├── core/              # Config, auth, DB session
+│   │   ├── core/              # Config, auth, logging
 │   │   ├── model/             # Pydantic models
-│   │   ├── service/           # Business logic (plane, github, memory)
-│   │   ├── database.py        # Supabase async connection
+│   │   ├── service/           # plane_client, github_client, gemini_client, stores, standup_context
+│   │   ├── database.py        # supabase async client (service-role)
 │   │   └── main.py            # FastAPI app entry
+│   ├── migrations/
+│   │   └── 001_initial.sql    # Canonical Supabase schema
 │   ├── pyproject.toml         # Python deps (uv)
 │   ├── Dockerfile
-│   ├── .dockerignore
-│   └── .env.example
+│   └── .dockerignore
 ├── n8n_workflows/
 │   ├── standup-pre-fetch.json     # Cron: fetch commits, prep context
 │   ├── daily-standup.json         # Chat Trigger: run standup
@@ -93,8 +94,7 @@ A standalone AI Scrum Master agent that automates repetitive tracking and commun
 
 ### Explicitly Out of Scope (MVP)
 
-- BA role tracking (deferred)
-- QA role tracking (deferred)
+- Commit-driven personalisation for BA/QA roles (they get generic context only)
 - CI/GitHub Actions integration (deferred)
 - Slack/Discord/Telegram bots (n8n Chat Trigger only)
 - Rich frontend dashboard (n8n UI only)
@@ -146,73 +146,41 @@ All user-facing interactions happen via **n8n Chat Trigger** (a web chat widget)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/api/health` | Health check |
-| `GET` | `/api/context/prefetch?project_id=X&cycle_id=Y` | Fetch members+commits+blockers, store compiled context |
-| `POST` | `/api/memory/compact` | Compact raw transcript via Gemini, store result |
-| `POST` | `/api/memory/upsert` | Upsert memory entry (idempotent) |
-| `GET` | `/api/memory/{sprint_id}` | Load all memory entries for a sprint |
+| `GET` | `/api/health` | Health check (no auth) |
+| `POST` | `/api/participants` | Seed/upsert a participant (Plane UUID -> role + github_login) |
+| `GET` | `/api/participants` | List active participants |
+| `GET` | `/api/context/prefetch?project_id=X&cycle_id=Y` | Role-aware fetch of members+commits+blockers; upserts `standup_context` |
+| `POST` | `/api/memory/compact` | Compact raw transcript via Gemini; returns summary |
+| `POST` | `/api/memory/upsert` | Upsert memory entry (idempotent on participant+sprint+date) |
+| `GET` | `/api/memory/{sprint_id}` | Load sprint memory as a single compacted JSON blob |
 | `POST` | `/api/plane/cycle-update` | Append standup summary to Plane cycle description |
-| `POST` | `/api/blocker/report` | Report a blocker (from webhook or direct) |
-| `GET` | `/api/blockers/active?project_id=X&cycle_id=Y` | Get active blockers |
+| `POST` | `/api/blocker/report` | Report a new blocker (creates with stable `key`) |
+| `POST` | `/api/blocker/{key}/update` | Append a textual update; bumps `updated_at` |
+| `POST` | `/api/blocker/{key}/resolve` | Mark blocker resolved |
+| `GET` | `/api/blockers/active?sprint_id=X` | Get active blockers (optionally scoped) |
 
-All endpoints (except `/health`) authenticated via `X-Agent-Secret` header.
+All endpoints (except `/api/health`) authenticated via `X-Agent-Secret` header.
 
 ---
 
 ## 9. Supabase Schema
 
-### Table: `standup_context`
-Pre-fetched commit/blocker data ready for the standup agent.
+Canonical schema lives in [backend/migrations/001_initial.sql](backend/migrations/001_initial.sql). Run it once in the Supabase SQL editor. Authoritative column definitions also documented in [.cursor/rules/500-database.mdc](.cursor/rules/500-database.mdc).
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID | PK, auto |
-| sprint_id | TEXT | Not null |
-| participant_id | TEXT | Plane user UUID |
-| commits | JSONB | `[{message, url, date}]` |
-| blockers | JSONB | `[{description, status, source}]` |
-| last_summary | TEXT | Previous standup compacted |
-| compiled_at | TIMESTAMPTZ | Default NOW() |
+Tables:
 
-### Table: `agent_memory`
-Compacted standup memory per participant per sprint.
+| Table | Purpose | Notes |
+|-------|---------|-------|
+| `participants` | Plane UUID -> `role` (developer/ba/qa) + `github_login` + `email` | Single source of truth for roles. UNIQUE on `plane_user_id`. |
+| `standup_context` | Pre-fetched commit/blocker context per member, per sprint | UNIQUE `(sprint_id, participant_id)` for SDK upserts. |
+| `agent_memory` | Compacted standup segments | UNIQUE `(participant_id, sprint_id, standup_date)` for idempotent upsert. `importance` 1-3, `stale` flag. |
+| `blockers` | Active + resolved blockers | Stable `key` for commit-message refs (`[BLOCKER:<key>]`), `sprint_id`, `last_update`, auto-bumping `updated_at` trigger. |
+| `sprint_memory` | Sprint planning key facts | `category` in (`goal`, `decision`, `boundary`, `note`). |
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID | PK, auto |
-| participant_id | TEXT | Not null |
-| sprint_id | TEXT | Not null |
-| standup_date | DATE | Not null |
-| summary | TEXT | Compacted transcript segment |
-| importance | INTEGER | 1 (routine) - 3 (blocker) |
-| stale | BOOLEAN | Default false |
-| created_at | TIMESTAMPTZ | Default NOW() |
-
-### Table: `blockers`
-Active and resolved blocker entries.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID | PK, auto |
-| participant_id | TEXT | Not null |
-| description | TEXT | Not null |
-| status | TEXT | `active` or `resolved` |
-| source | TEXT | `manual`, `github_commit`, `standup` |
-| github_url | TEXT | Link to commit if applicable |
-| created_at | TIMESTAMPTZ | Default NOW() |
-| resolved_at | TIMESTAMPTZ | Null until resolved |
-| updated_at | TIMESTAMPTZ | Default NOW() |
-
-### Table: `sprint_memory`
-Sprint planning key facts (stretch planning goals, decisions).
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID | PK, auto |
-| sprint_id | TEXT | Not null |
-| key_fact | TEXT | Not null |
-| category | TEXT | e.g. `goal`, `decision`, `boundary` |
-| created_at | TIMESTAMPTZ | Default NOW() |
+Access pattern:
+- **Backend**: `supabase>=2.4` async SDK, authenticated with `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS).
+- **n8n**: native Postgres node via `SUPABASE_DATABASE_URL`.
+- RLS is intentionally NOT enabled for the MVP.
 
 ---
 
@@ -350,7 +318,7 @@ Sprint planning key facts (stretch planning goals, decisions).
 | Workflow architecture | **Single workflow per feature** | Avoids Wait node sub-workflow bug. |
 | Sprint Planning mechanism | **Chat Trigger (manual summary)** | No audio transcription — SM pastes notes. |
 | Commit tracking timing | **Cron pre-fetch (T-45min)** | Prepares context before standup opens. |
-| Team roles in MVP | **Developer only** | BA/QA deferred. Everyone gets same treatment. |
+| Team roles in MVP | **Developer + BA + QA** | Developer gets commit-driven personalised questions; BA/QA get generic context (blockers + last memory). Role lives on `participants.role`. |
 
 ---
 
