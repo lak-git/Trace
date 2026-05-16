@@ -130,7 +130,7 @@ jobs:
             GEMINI_MODEL=${{ vars.GEMINI_MODEL }}
             STANDUP_CRON=${{ vars.STANDUP_CRON }}
             STANDUP_TIMEZONE=${{ vars.STANDUP_TIMEZONE }}
-            GITHUB_REPO=${{ vars.GITHUB_REPO }}
+            GITHUB_REPO=${{ vars.GH_REPO }}
             CORS_ALLOW_ORIGINS=${{ vars.CORS_ALLOW_ORIGINS }}
           secrets: |
             SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest
