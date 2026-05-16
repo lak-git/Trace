@@ -13,6 +13,23 @@ class GitCommit(BaseModel):
     date: datetime | None = None
     author_name: str | None = None
     author_email: str | None = None
+    stats: "CommitStats | None" = None
+    files: list["CommitFile"] = Field(default_factory=list)
+
+
+class CommitStats(BaseModel):
+    total: int = 0
+    additions: int = 0
+    deletions: int = 0
+
+
+class CommitFile(BaseModel):
+    filename: str
+    status: str
+    additions: int = 0
+    deletions: int = 0
+    changes: int = 0
+    patch: str | None = None
 
 
 class StandupContext(BaseModel):
@@ -32,6 +49,7 @@ class ParticipantContext(BaseModel):
     display_name: str
     role: ParticipantRole
     commits: list[GitCommit] = Field(default_factory=list)
+    has_recent_commits: bool = False
     active_blockers: list[Blocker] = Field(default_factory=list)
     last_summary: str | None = None
 
