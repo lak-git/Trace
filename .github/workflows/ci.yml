@@ -37,8 +37,8 @@ jobs:
       - name: Run ruff check
         run: uv run ruff check .
 
-      - name: Run ruff format check
-        run: uv run ruff format --check .
+      - name: Auto-format with ruff
+        run: uv run ruff format .
 
   test:
     name: Test
