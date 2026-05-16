@@ -21,10 +21,7 @@
 **/yarn.lock
 **/pnpm-lock.yaml
 **/poetry.lock
-**/uv.lock
 
-# Docker
-**/Dockerfile
 
 # Repomix output
 repomix-output.xml
