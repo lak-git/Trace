@@ -1,0 +1,54 @@
+---
+description: Project constitution for the Agentic Scrum Assistant buildathon project. Always active.
+alwaysApply: true
+---
+
+# Project: Agentic Scrum Assistant (Cursor Buildathon — May 16)
+
+## What We Are Building
+A standalone an Agentic Scrum Assistant that automates repetitive tracking and communication across an Agile Scrum team. NOT built on top of any existing PM platform. Integrates with Plane Cloud via REST API. All user-facing orchestration in n8n (track technology).
+
+## Directory Structure
+```
+.                               # Root — standalone project root
+├── backend/                    # Python FastAPI backend
+│   ├── app/
+│   │   ├── api/endpoints/      # FastAPI route handlers
+│   │   ├── core/               # Config, auth, DB session
+│   │   ├── model/              # Pydantic models
+│   │   ├── service/            # Business logic (plane, github, memory)
+│   │   ├── database.py         # Supabase async connection
+│   │   └── main.py             # FastAPI app entry
+│   ├── pyproject.toml          # Python deps (uv)
+│   ├── Dockerfile
+│   └── .dockerignore
+├── n8n_workflows/              # n8n workflow JSON exports
+│   ├── standup-pre-fetch.json
+│   ├── daily-standup.json
+│   ├── sprint-planning.json
+│   ├── blocker-webhook.json
+│   └── user-story-gen.json     # STRETCH
+├── AGENTS.md
+├── SETUP.md
+├── .env.agent.example
+├── repomix.config.json
+└── .gitignore
+```
+
+## Stack
+- Backend: Python 3.11+, FastAPI, httpx (async), tenacity (retries), Pydantic v2
+- Database: Supabase PostgreSQL (ap-southeast-1)
+- Orchestration: n8n Cloud (track technology — must be central)
+- LLM: Gemini 3.1 Pro / Gemini 3 Flash via Google AI Studio (student credits)
+- UI: n8n Chat Trigger (no Next.js, no React, no Tailwind)
+- Deployment: Google Cloud Run ($300 credits)
+- MCP Tools: Repomix (codebase context), Context7 (live library docs)
+
+## Absolute Rules
+1. Plane API calls go through service/plane_client.py only. No direct calls elsewhere.
+2. All environment variables go in .env.agent with a placeholder in .env.agent.example.
+3. Never hardcode credentials, API keys, or connection strings anywhere.
+4. Plane API auth: header `X-API-Key`, token format `plane_api_<token>`. Rate limit: 60 req/min.
+5. Plane uses "cycle" (not "sprint") in its internal API.
+6. Plane's Cloud API uses `/work-items/` paths (not `/issues/`).
+7. No frontend framework. n8n Chat Trigger is the UI. If a dashboard is added, use vanilla HTML served by FastAPI.

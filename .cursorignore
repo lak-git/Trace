@@ -1,0 +1,30 @@
+# .cursorignore
+# Prevents Cursor from passively indexing files not relevant to agent development.
+
+# Python artefacts
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.venv/
+**/venv/
+
+# Build outputs
+**/dist/
+**/build/
+
+# Environment files (secrets)
+.env.agent
+.env
+
+# Large lock files
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+**/poetry.lock
+**/uv.lock
+
+# Docker
+**/Dockerfile
+
+# Repomix output
+repomix-output.xml

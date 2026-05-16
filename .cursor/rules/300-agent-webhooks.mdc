@@ -1,0 +1,73 @@
+---
+description: Webhook endpoint rules for the agent's FastAPI surface called by n8n.
+globs:
+  - backend/app/api/**/*.py
+  - backend/app/api/endpoints/**/*.py
+alwaysApply: false
+---
+
+# Agent Webhook Rules (FastAPI)
+
+> These rules govern the HTTP endpoints that n8n calls on the FastAPI backend.
+
+## Response Shape
+All agent webhook endpoints must return a consistent envelope:
+```python
+from fastapi.responses import JSONResponse
+
+# Success
+return {"success": True, "data": {...}}
+
+# Error
+return JSONResponse({"success": False, "error": "description"}, status_code=400)
+```
+
+Never return raw objects or lists at the top level.
+
+## Webhook Authentication
+- All n8n-facing endpoints authenticate via shared secret:
+  ```python
+  from fastapi import Header, HTTPException
+
+  async def verify_webhook(x_agent_secret: str = Header(...)):
+      if x_agent_secret != settings.AGENT_N8N_WEBHOOK_SECRET:
+          raise HTTPException(status_code=401, detail="Unauthorized")
+  ```
+- The env var is `AGENT_N8N_WEBHOOK_SECRET` — it must be in .env.agent.
+- Consider extracting this into a FastAPI dependency for reuse.
+
+## Endpoint Conventions
+- Agent webhook URLs live under `/api/` prefix.
+- Each endpoint has a clear, single action (e.g. `/api/context/prefetch`, `/api/memory/upsert`).
+- URL naming: kebab-case for URL paths, snake_case for function names.
+
+## Validation
+- Validate all incoming payloads with Pydantic before acting:
+  ```python
+  from pydantic import BaseModel, ValidationError
+
+  class StandupContextPayload(BaseModel):
+      project_id: str
+      cycle_id: str
+
+  @router.post("/context/prefetch")
+  async def prefetch(payload: StandupContextPayload):
+      ...
+  ```
+
+## Async Patterns
+- Use `async def` throughout.
+- Wrap all async operations in try/except — never let unhandled exceptions crash the process.
+- For long-running operations (Gemini calls), use background tasks or return 202 Accepted.
+
+## Endpoint Registry
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/context/prefetch` | Fetch members+commits+blockers; store compiled context |
+| `POST` | `/api/memory/compact` | Compact raw transcript via Gemini; store |
+| `POST` | `/api/memory/upsert` | Upsert memory entry |
+| `GET` | `/api/memory/{sprint_id}` | Load sprint memory |
+| `POST` | `/api/plane/cycle-update` | Append standup summary to Plane cycle |
+| `POST` | `/api/blocker/report` | Report a blocker (from webhook) |
+| `GET` | `/api/blockers/active` | Get active blockers for a sprint |

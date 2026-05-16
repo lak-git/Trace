@@ -1,0 +1,27 @@
+---
+description: Frontend rules — n8n Chat Trigger is the UI. No traditional frontend framework.
+alwaysApply: false
+---
+
+# Frontend Rules (n8n as UI)
+
+## Core Principle
+This project has NO traditional frontend framework. The user interface IS n8n's Chat Trigger.
+No Next.js, no React, no Vue, no Tailwind, no build step.
+
+## Interaction Model
+- **Daily Standup**: n8n Chat Trigger (single room, all participants)
+- **Sprint Planning**: n8n Chat Trigger (Scrum Master only)
+- **User Story Generation**: n8n Chat Trigger (Scrum Master only) — STRETCH
+- **Blocker Capture**: GitHub webhook or direct n8n webhook form
+
+## If a Dashboard Is Added (STRETCH)
+If time permits building a status dashboard:
+- Serve a single HTML page from FastAPI (no build step)
+- Use vanilla JS or htmx — no React/Next.js
+- No separate frontend deployment
+- No npm, no bundler, no Tailwind
+
+## No Alternative UI
+Do NOT suggest or build Slack bots, Discord bots, Telegram bots, or any other chat platform integration.
+The n8n Chat Trigger is the only UI for the MVP.

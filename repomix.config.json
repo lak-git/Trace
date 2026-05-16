@@ -1,0 +1,42 @@
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "compress": true,
+    "removeComments": false,
+    "removeEmptyLines": true,
+    "showLineNumbers": false,
+    "fileSummary": true,
+    "directoryStructure": true,
+    "topFilesLength": 10
+  },
+  "include": [
+    "backend/**/*.py",
+    "backend/**/*.toml",
+    "backend/**/*.yml",
+    "backend/**/*.yaml",
+    "n8n_workflows/*.json",
+    "AGENTS.md",
+    "SETUP.md",
+    ".cursor/rules/*.mdc",
+    ".env.agent.example"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/__pycache__/**",
+      "**/*.pyc",
+      "**/*.pyo",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.venv/**",
+      "**/venv/**",
+      "**/.env*",
+      "repomix-output.xml"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

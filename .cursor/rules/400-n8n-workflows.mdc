@@ -1,0 +1,82 @@
+---
+description: n8n workflow design rules. Invoke with @400-n8n-workflows when working on orchestration.
+globs:
+  - n8n_workflows/**
+alwaysApply: false
+---
+
+# n8n Workflow Rules
+
+## File Organisation
+- Workflow JSON exports live in `n8n_workflows/`
+- No paired README files — comments in the workflow nodes document each step.
+
+## Naming Convention
+- Workflow files: `<action>.json` (e.g. `daily-standup.json`, `standup-pre-fetch.json`)
+- Workflow names inside n8n must match the filename (minus extension).
+
+## Credential Rules
+- NEVER embed credentials or API keys inside workflow JSON.
+- All credentials are stored in n8n's credential manager and referenced by credential name.
+
+## Required Patterns
+- Every HTTP Request node must have an Error branch connected.
+- Workflows that write to Supabase must handle duplicate/conflict errors explicitly.
+- The final node of every workflow must return a confirmation — never leave a dangling branch.
+
+## Agent Integration Pattern
+- Workflows that trigger the backend call the FastAPI endpoints:
+  `POST /api/context/prefetch`, `POST /api/memory/compact`, etc.
+- Authentication via `X-Agent-Secret` header.
+
+## Gemini Usage in n8n
+- Use the native Google Gemini Chat Model node in AI Agent setups.
+- Do NOT use HTTP Request node for Gemini — the native node handles credentials and streaming.
+- The AI Agent node supports: memory (via Postgres), tools (HTTP Request, Workflow, Code), multi-step reasoning.
+
+## Wait Node
+- Use Wait node in "On Webhook Call" mode for async standup responses.
+- Maximum practical wait: ~24h (no hard limit, but DB-persisted after 65s).
+- IMPORTANT: Do NOT call workflows containing Wait nodes as sub-workflows via Workflow Tool.
+  Known bug: the parent receives data from before the Wait, not after.
+  Instead, keep all Wait-involving logic in a single workflow.
+
+## Chat Trigger
+- Daily standup uses Chat Trigger (single room).
+- The AI Agent manages turn-taking via system prompt.
+- Only one Chat Trigger per workflow.
+
+## Workflow Definitions
+
+### standup-pre-fetch (Cron trigger)
+1. Call backend `GET /api/context/prefetch` with project_id and cycle_id
+2. Backend returns compiled context per member (commits + blockers + last summary)
+3. Store in Supabase `standup_context` table
+
+### daily-standup (Chat Trigger)
+1. Load pre-fetched context from Supabase
+2. AI Agent runs standup per member:
+   - Greet member, show their commit context
+   - Ask tailored question based on commits
+   - Follow up on known blockers
+   - Compact + store after each member
+3. Post summary to chat room
+4. Call backend `POST /api/plane/cycle-update` to write to Plane
+
+### sprint-planning (Chat Trigger)
+1. Scrum Master describes sprint goals
+2. AI Agent asks clarifying questions
+3. Key facts stored in Supabase `sprint_memory`
+4. Facts referenced during subsequent standups
+
+### blocker-webhook (Webhook trigger)
+1. Receive GitHub push payload
+2. Parse commit messages for `[BLOCKED]` keyword
+3. If found: store/update in Supabase `blockers` table
+4. If resolved: mark blocker as resolved
+
+### user-story-gen (Chat Trigger — STRETCH)
+1. SM describes client needs
+2. Agent generates user stories + acceptance criteria
+3. SM reviews and approves/edits
+4. Stories created in Plane via API

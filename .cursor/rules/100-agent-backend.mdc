@@ -1,0 +1,90 @@
+---
+description: Python/FastAPI rules for the scrum agent backend. Auto-attached to all Python files in backend/.
+globs:
+  - backend/**/*.py
+alwaysApply: false
+---
+
+# Agent Backend Rules (Python / FastAPI)
+
+## Stack
+- Python 3.11+
+- FastAPI (async web framework)
+- httpx (async HTTP — use this, NOT requests library)
+- tenacity (retry logic)
+- Pydantic v2 (data validation)
+- Ruff (linting and formatting — not Black, not Flake8)
+- asyncpg / sqlalchemy[asyncio] (database)
+
+## Type Safety
+- All function signatures must have type hints. No untyped signatures.
+- Use Pydantic BaseModel for any data crossing service boundaries (Plane API, n8n, Gemini).
+- No bare `dict` as a function return type if the shape is known — define a model.
+
+## Async Patterns
+- All external API calls (Plane, GitHub, Gemini) must use httpx.AsyncClient.
+- Never use requests library — it is synchronous and not appropriate here.
+- Use `async def` and `await` throughout. No mixing sync and async in the same call chain.
+
+## Error Handling
+- Use guard clauses — return early on error conditions. Do not nest conditionals.
+- All httpx calls must be wrapped in try/except httpx.HTTPStatusError and httpx.RequestError.
+- Retry logic for external calls uses tenacity `@retry` with exponential backoff:
+  ```python
+  from tenacity import retry, stop_after_attempt, wait_exponential
+  @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+  ```
+- Never swallow exceptions silently. Always log before re-raising or returning an error response.
+
+## Plane API Integration
+- ALL calls to the Plane API must go through `service/plane_client.py`.
+- No file outside plane_client.py may import httpx or make HTTP calls to Plane's endpoints directly.
+- plane_client.py exposes typed async methods only. Callers receive Pydantic models, not raw dicts.
+
+## Plane API Authentication
+- Header: `X-API-Key` (value from `PLANE_API_TOKEN` env var).
+- Token format: `plane_api_<32-char-hex>`.
+- Rate limit: 60 requests/minute per key. Respect `X-RateLimit-Remaining` and
+  `X-RateLimit-Reset` response headers. Implement throttling in plane_client.py.
+- Content-Type: `application/json` for all request/response bodies.
+
+## Plane API Endpoint Patterns
+Base: `https://api.plane.so/api/v1/workspaces/{slug}/...`
+
+Key patterns used by the agent:
+- Cycles (sprints): `.../projects/{pid}/cycles/`, `.../cycles/{cid}/`, `.../cycles/{cid}/cycle-issues/`
+- Work items (issues): `.../projects/{pid}/work-items/`, `.../work-items/{iid}/`
+- States: `.../projects/{pid}/states/`
+- Members: `/project-members/` (workspace), `.../projects/{pid}/project-members/` (project)
+- Activity: `.../work-items/{iid}/activities/`
+
+## Plane API Pagination
+- Cursor-based: `?per_page=100&cursor=<value:offset:is_prev>`.
+- Cursor format: `value:offset:is_prev` (e.g. `100:1:0` for page 2).
+- Response envelope: `{ results: [...], next_cursor, prev_cursor, next_page_results, total_results }`.
+- Use `fields=` query param for sparse responses, `expand=` for nested data.
+
+## Standup Summary → Plane
+- Standup summaries are written to the cycle description via:
+  `PATCH /workspaces/{slug}/projects/{pid}/cycles/{cid}/`
+  with `{"description": "Daily Standup YYYY-MM-DD:\n- @alice: ..."}`
+
+## Memory Store
+- Agent memory is stored as structured JSON in Supabase.
+- Schema is defined in `model/memory_schema.py`.
+- Memory updates are idempotent — always upsert, never blind insert.
+- Stale memory (no reference in last 3 standups) must be marked for expiry, not deleted immediately.
+
+## Webhook Authentication
+- All n8n-facing endpoints authenticate via shared secret:
+  ```python
+  secret = request.headers.get("X-Agent-Secret")
+  if secret != settings.AGENT_N8N_WEBHOOK_SECRET:
+      return JSONResponse({"success": False, "error": "Unauthorized"}, status_code=401)
+  ```
+
+## Gemini API
+- Use `google-generativeai` Python SDK.
+- Use `GEMINI_MODEL` env var (e.g. `gemini-3.1-pro` or `gemini-3-flash`).
+- Always set `generation_config` with explicit `max_output_tokens` — never let it run unbounded.
+- API key comes from `GEMINI_API_KEY` env var only.
