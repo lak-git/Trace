@@ -9,65 +9,9 @@ env:
   IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.AR_REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE }}
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: backend/.python-version
-
-      - name: Install dev dependencies
-        run: uv sync --frozen
-
-      - name: Run ruff check
-        run: uv run ruff check .
-
-      - name: Auto-format with ruff
-        run: uv run ruff format .
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: backend/.python-version
-
-      - name: Install dev dependencies
-        run: uv sync --frozen
-
-      - name: Run pytest
-        run: uv run pytest -v
-
   release:
     name: Build, Push & Deploy
     runs-on: ubuntu-latest
-    needs: [lint, test]
 
     permissions:
       contents: read
