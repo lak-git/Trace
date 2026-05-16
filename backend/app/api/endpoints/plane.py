@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.deps import get_plane_client
 from app.core.auth import verify_webhook_secret
-from app.model.plane import CycleUpdateRequest
+from app.model.plane import CreateWorkItemRequest, CycleUpdateRequest
 from app.service.plane_client import PlaneClient
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,25 @@ async def update_cycle(
         return {"success": True, "data": result.model_dump(mode="json")}
     except Exception as exc:
         logger.exception("Failed to update Plane cycle")
+        return JSONResponse({"success": False, "error": str(exc)}, status_code=400)
+    finally:
+        await plane.aclose()
+
+
+@router.post("/work-item", response_model=None)
+async def create_work_item(
+    payload: CreateWorkItemRequest,
+    plane: PlaneClientDep,
+) -> dict[str, object] | JSONResponse:
+    try:
+        result = await plane.create_work_item(
+            name=payload.name,
+            description_html=payload.description_html,
+            project_id=payload.project_id,
+        )
+        return {"success": True, "data": result.model_dump(mode="json")}
+    except Exception as exc:
+        logger.exception("Failed to create Plane work item")
         return JSONResponse({"success": False, "error": str(exc)}, status_code=400)
     finally:
         await plane.aclose()

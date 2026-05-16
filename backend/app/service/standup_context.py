@@ -1,7 +1,9 @@
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
+from app.core.config import Settings
 from app.model.participant import Participant, ParticipantRole
-from app.model.standup import CompiledContext, ParticipantContext, StandupContext
+from app.model.standup import CompiledContext, GitCommit, ParticipantContext, StandupContext
 from app.service.blocker_store import BlockerStore
 from app.service.github_client import GitHubClient
 from app.service.memory_store import MemoryStore
@@ -17,12 +19,38 @@ class StandupContextService:
         memory_store: MemoryStore,
         plane_client: PlaneClient,
         github_client: GitHubClient,
+        settings: Settings,
     ) -> None:
         self._participant_store = participant_store
         self._blocker_store = blocker_store
         self._memory_store = memory_store
         self._plane_client = plane_client
         self._github_client = github_client
+        self._settings = settings
+
+    def _standup_window(self, now: datetime | None = None) -> tuple[datetime, datetime]:
+        now_utc = now or datetime.now(UTC)
+        tz = ZoneInfo(self._settings.STANDUP_TIMEZONE)
+        localized_now = now_utc.astimezone(tz)
+        current_standup = localized_now.replace(hour=9, minute=0, second=0, microsecond=0)
+        previous_standup = current_standup - timedelta(days=1)
+        return previous_standup.astimezone(UTC), current_standup.astimezone(UTC)
+
+    @staticmethod
+    def _strip_transient_commit_fields(commits: list[GitCommit]) -> list[GitCommit]:
+        sanitized: list[GitCommit] = []
+        for commit in commits:
+            sanitized.append(
+                GitCommit(
+                    sha=commit.sha,
+                    message=commit.message,
+                    url=commit.url,
+                    date=commit.date,
+                    author_name=commit.author_name,
+                    author_email=commit.author_email,
+                ),
+            )
+        return sanitized
 
     async def compile_context(
         self,
@@ -31,7 +59,8 @@ class StandupContextService:
         since: datetime | None = None,
     ) -> tuple[CompiledContext, list[StandupContext], list[Participant]]:
         sprint_id = cycle_id
-        from_time = since or (datetime.now(UTC) - timedelta(days=1))
+        window_start, window_end = self._standup_window()
+        from_time = since or window_start
         plane_members = await self._plane_client.list_project_members(project_id=project_id)
         stored_context: list[StandupContext] = []
         participant_contexts: list[ParticipantContext] = []
@@ -61,17 +90,30 @@ class StandupContextService:
                 sprint_id=sprint_id,
             )
             commits = []
+            has_recent_commits = False
             if participant.role == ParticipantRole.DEVELOPER:
                 commits = await self._github_client.commits_since(
                     github_login=participant.github_login,
                     email=participant.email,
                     since=from_time,
                 )
+                commits = [
+                    commit
+                    for commit in commits
+                    if commit.date is not None and from_time <= commit.date < window_end
+                ]
+                has_recent_commits = len(commits) > 0
+                if not has_recent_commits:
+                    latest_commit = await self._github_client.latest_commit(
+                        github_login=participant.github_login,
+                        email=participant.email,
+                    )
+                    commits = [latest_commit] if latest_commit else []
 
             context = StandupContext(
                 sprint_id=sprint_id,
                 participant_id=participant.plane_user_id,
-                commits=commits,
+                commits=self._strip_transient_commit_fields(commits),
                 blockers=blockers,
                 last_summary=last_summary,
             )
@@ -83,6 +125,7 @@ class StandupContextService:
                     display_name=participant.display_name,
                     role=participant.role,
                     commits=commits,
+                    has_recent_commits=has_recent_commits,
                     active_blockers=blockers,
                     last_summary=last_summary,
                 ),

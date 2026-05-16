@@ -65,21 +65,15 @@
     },
     {
       "parameters": {
-        "toolDescription": "Use this tool ONLY after the user has explicitly approved the generated user story and acceptance criteria. It creates a new work item issue inside the targeted Plane Cloud project",
+        "toolDescription": "Use this tool ONLY after the user has explicitly approved the generated user story and acceptance criteria. It creates a new work item in Plane via the FastAPI backend (not Plane directly).",
         "method": "POST",
-        "url": "=https://api.plane.so/api/v1/workspaces/stefan-test/projects/{{ $fromAI('project_id', 'The alphanumeric Plane Project UUID from the chat') }}/work-items/",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {}
-          ]
-        },
+        "url": "={{ ($env.AGENT_BACKEND_URL || 'http://localhost:8000') + '/api/plane/work-item' }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "X-API-Key",
-              "value": "plane_api_708f7552949c412f84c308a3741f8474"
+              "name": "X-Agent-Secret",
+              "value": "={{ $env.AGENT_N8N_WEBHOOK_SECRET }}"
             },
             {
               "name": "Content-Type",
@@ -88,18 +82,8 @@
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "name",
-              "value": "={{ $fromAI('story_title', 'A short, actionable title for the user story') }}"
-            },
-            {
-              "name": "description_html",
-              "value": "=<p>{{ $fromAI('story_body', 'The full text of the user story following the As a... I want... so that... format') }}</p><br><h3>Acceptance Criteria</h3><p>{{ $fromAI('acceptance_criteria', 'The finalized Given-When-Then criteria bullet points approved by the Scrum Master') }}</p>"
-            }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ project_id: $fromAI('project_id', 'The alphanumeric Plane Project UUID from the chat (optional if default project is configured)'), name: $fromAI('story_title', 'A short, actionable title for the user story'), description_html: '<p>' + $fromAI('story_body', 'The full text of the user story following the As a... I want... so that... format') + '</p><br><h3>Acceptance Criteria</h3><p>' + $fromAI('acceptance_criteria', 'The finalized Given-When-Then criteria bullet points approved by the Scrum Master') + '</p>' }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequestTool",
@@ -109,7 +93,7 @@
         224
       ],
       "id": "f197065a-40b8-45d7-9f38-1d8ef69b14ce",
-      "name": "HTTP Request"
+      "name": "Create Plane Work Item"
     }
   ],
   "pinData": {},
@@ -147,7 +131,7 @@
         ]
       ]
     },
-    "HTTP Request": {
+    "Create Plane Work Item": {
       "ai_tool": [
         [
           {
