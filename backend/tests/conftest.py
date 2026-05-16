@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -220,13 +220,14 @@ def github_client_mock() -> AsyncMock:
     client = AsyncMock()
 
     async def _commits_since(github_login: str | None, email: str | None, since):  # noqa: ANN001
+        base_time = since if isinstance(since, datetime) else datetime.now(UTC) - timedelta(hours=24)
         if github_login == "alice":
             return [
                 GitCommit(
                     sha="commit1",
                     message="feat(biometrics): add FaceID enrollment flow",
                     url="github.com/repo/financeflow/commits/1",
-                    date="2026-05-16T00:00:00Z",
+                    date=(base_time + timedelta(hours=1)).isoformat(),
                     author_name="Alice",
                     author_email=email,
                     stats=CommitStats(total=10, additions=8, deletions=2),
@@ -245,7 +246,7 @@ def github_client_mock() -> AsyncMock:
                     sha="commit2",
                     message="fix(biometrics): handle cancelled auth",
                     url="github.com/repo/financeflow/commits/2",
-                    date="2026-05-16T01:00:00Z",
+                    date=(base_time + timedelta(hours=2)).isoformat(),
                     author_name="Alice",
                     author_email=email,
                     stats=CommitStats(total=6, additions=5, deletions=1),
@@ -267,7 +268,7 @@ def github_client_mock() -> AsyncMock:
                     sha="commit3",
                     message="fix(payment-timeout): add circuit breaker",
                     url="github.com/repo/financeflow/commits/3",
-                    date="2026-05-16T02:00:00Z",
+                    date=(base_time + timedelta(hours=3)).isoformat(),
                     author_name="Bob",
                     author_email=email,
                     stats=CommitStats(total=12, additions=9, deletions=3),
@@ -286,7 +287,7 @@ def github_client_mock() -> AsyncMock:
                     sha="commit4",
                     message="fix(payment-timeout): flaky test WIP",
                     url="github.com/repo/financeflow/commits/4",
-                    date="2026-05-16T03:00:00Z",
+                    date=(base_time + timedelta(hours=4)).isoformat(),
                     author_name="Bob",
                     author_email=email,
                     stats=CommitStats(total=7, additions=6, deletions=1),
@@ -308,7 +309,7 @@ def github_client_mock() -> AsyncMock:
                     sha="commit5",
                     message="feat(dashboard): transaction list component",
                     url="github.com/repo/financeflow/commits/5",
-                    date="2026-05-16T04:00:00Z",
+                    date=(base_time + timedelta(hours=5)).isoformat(),
                     author_name="Carol",
                     author_email=email,
                     stats=CommitStats(total=5, additions=5, deletions=0),
