@@ -1,25 +1,8 @@
 import logging
-from datetime import datetime
-from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import JSONResponse
 
-from app.api.deps import (
-    SettingsDep,
-    get_blocker_store,
-    get_github_client,
-    get_memory_store,
-    get_participant_store,
-    get_plane_client,
-)
 from app.core.auth import verify_webhook_secret
-from app.service.blocker_store import BlockerStore
-from app.service.github_client import GitHubClient
-from app.service.memory_store import MemoryStore
-from app.service.participant_store import ParticipantStore
-from app.service.plane_client import PlaneClient
-from app.service.standup_context import StandupContextService
 
 logger = logging.getLogger(__name__)
 
@@ -29,50 +12,84 @@ router = APIRouter(
     dependencies=[Depends(verify_webhook_secret)],
 )
 
-ParticipantStoreDep = Annotated[ParticipantStore, Depends(get_participant_store)]
-BlockerStoreDep = Annotated[BlockerStore, Depends(get_blocker_store)]
-MemoryStoreDep = Annotated[MemoryStore, Depends(get_memory_store)]
-PlaneClientDep = Annotated[PlaneClient, Depends(get_plane_client)]
-GitHubClientDep = Annotated[GitHubClient, Depends(get_github_client)]
+MOCK_CONTEXT_DATA = [
+    {
+        "sprint_id": "sprint-7",
+        "participant_id": "usr_alice_biometrics",
+        "commits": [
+            {
+                "sha": "commit1",
+                "message": "feat(biometrics): add FaceID enrollment flow",
+                "url": "github.com/repo/financeflow/commits/1",
+                "date": "2026-05-16T00:00:00Z",
+            },
+            {
+                "sha": "commit2",
+                "message": "fix(biometrics): handle cancelled auth",
+                "url": "github.com/repo/financeflow/commits/2",
+                "date": "2026-05-16T00:00:00Z",
+            },
+        ],
+        "blockers": [],
+        "last_summary": "Alice successfully completed the baseline biometric encryption wrapper yesterday. No blockers reported.",
+        "compiled_at": "2026-05-16T09:45:00Z",
+    },
+    {
+        "sprint_id": "sprint-7",
+        "participant_id": "usr_bob_payment",
+        "commits": [
+            {
+                "sha": "commit3",
+                "message": "fix(payment-timeout): add circuit breaker",
+                "url": "github.com/repo/financeflow/commits/3",
+                "date": "2026-05-16T00:00:00Z",
+            },
+            {
+                "sha": "commit4",
+                "message": "fix(payment-timeout): flaky test WIP",
+                "url": "github.com/repo/financeflow/commits/4",
+                "date": "2026-05-16T00:00:00Z",
+            },
+        ],
+        "blockers": [
+            {
+                "key": "bob-ci-flakiness",
+                "participant_id": "usr_bob_payment",
+                "sprint_id": "sprint-7",
+                "description": "CI test flakiness on payment endpoints impacting deployment",
+                "status": "active",
+                "source": "standup",
+                "github_url": None,
+                "last_update": None,
+                "created_at": "2026-05-15T10:00:00Z",
+                "updated_at": "2026-05-16T08:30:00Z",
+                "resolved_at": None,
+            },
+        ],
+        "last_summary": "Bob mentioned having environment orchestration setup errors with the local testing framework.",
+        "compiled_at": "2026-05-16T09:45:00Z",
+    },
+    {
+        "sprint_id": "sprint-7",
+        "participant_id": "usr_carol_dashboard",
+        "commits": [
+            {
+                "sha": "commit5",
+                "message": "feat(dashboard): transaction list component",
+                "url": "github.com/repo/financeflow/commits/5",
+                "date": "2026-05-16T00:00:00Z",
+            },
+        ],
+        "blockers": [],
+        "last_summary": "Carol was working through UI responsiveness issues for the dashboard layouts on mobile screens.",
+        "compiled_at": "2026-05-16T09:45:00Z",
+    },
+]
 
 
 @router.get("/prefetch", response_model=None)
 async def prefetch_context(
-    settings: SettingsDep,
-    participant_store: ParticipantStoreDep,
-    blocker_store: BlockerStoreDep,
-    memory_store: MemoryStoreDep,
-    plane: PlaneClientDep,
-    github: GitHubClientDep,
     cycle_id: str = Query(...),
     project_id: str | None = Query(default=None),
-    since: datetime | None = Query(default=None),
-) -> dict[str, object] | JSONResponse:
-    pid = project_id or settings.PLANE_PROJECT_ID
-    service = StandupContextService(
-        participant_store=participant_store,
-        blocker_store=blocker_store,
-        memory_store=memory_store,
-        plane_client=plane,
-        github_client=github,
-    )
-    try:
-        compiled, stored, missing = await service.compile_context(
-            project_id=pid,
-            cycle_id=cycle_id,
-            since=since,
-        )
-        return {
-            "success": True,
-            "data": {
-                "compiled": compiled.model_dump(mode="json"),
-                "stored_context": [item.model_dump(mode="json") for item in stored],
-                "missing_participants": [item.model_dump(mode="json") for item in missing],
-            },
-        }
-    except Exception as exc:
-        logger.exception("Failed to prefetch standup context")
-        return JSONResponse({"success": False, "error": str(exc)}, status_code=400)
-    finally:
-        await plane.aclose()
-        await github.aclose()
+) -> dict[str, object]:
+    return {"success": True, "data": MOCK_CONTEXT_DATA}

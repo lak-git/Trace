@@ -118,7 +118,7 @@ jobs:
           service: ${{ vars.CLOUD_RUN_SERVICE }}
           region: ${{ vars.GCP_REGION }}
           image: ${{ env.IMAGE }}:${{ github.sha }}
-          flags: --min-instances=1
+          flags: --min-instances=1 --allow-unauthenticated
           # Environment variables that the FastAPI app reads at runtime.
           # Set these as GitHub Actions variables (non-sensitive) or secrets (sensitive).
           # Cloud Run also supports Secret Manager references for sensitive values.
