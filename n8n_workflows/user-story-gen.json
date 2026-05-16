@@ -3,32 +3,64 @@
   "nodes": [
     {
       "parameters": {
+        "toolDescription": "Use this tool ONLY after the user has explicitly approved the generated user story and acceptance criteria. It creates a new work item issue inside the targeted Plane Cloud project",
+        "method": "POST",
+        "url": "={{ $vars.BACKEND_URL }}/api/plane/work-item",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $vars.AGENT_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $fromAI('story_title', 'A short, actionable title for the user story') }}"
+            },
+            {
+              "name": "description_html",
+              "value": "=<p>{{ $fromAI('story_body', 'The full text of the user story following the As a... I want... so that... format') }}</p><br><h3>Acceptance Criteria</h3><p>{{ $fromAI('acceptance_criteria', 'The finalized Given-When-Then criteria bullet points approved by the Scrum Master') }}</p>"
+            }
+          ]
+        },
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
-      "typeVersion": 1.4,
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
       "position": [
-        -176,
-        -112
+        368,
+        224
       ],
-      "id": "d517acae-7cb1-43b8-8caa-93fdde162662",
-      "name": "When chat message received",
-      "webhookId": "6514220b-600e-428b-9771-1b6f32a08521"
+      "id": "f197065a-40b8-45d7-9f38-1d8ef69b14ce",
+      "name": "HTTP Request"
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "={{ $json.chatInput }}",
-        "options": {}
+        "contextWindowLength": 15
       },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 3.1,
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
       "position": [
-        96,
-        -112
+        192,
+        224
       ],
-      "id": "5245be32-68f4-485b-b2da-b5835bb784af",
-      "name": "AI Agent"
+      "id": "360a03a7-2cf9-4886-a127-ded4ee9d2f77",
+      "name": "Simple Memory"
     },
     {
       "parameters": {
@@ -52,69 +84,42 @@
     },
     {
       "parameters": {
-        "contextWindowLength": 15
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-      "typeVersion": 1.4,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
       "position": [
-        192,
-        224
+        96,
+        -112
       ],
-      "id": "360a03a7-2cf9-4886-a127-ded4ee9d2f77",
-      "name": "Simple Memory"
+      "id": "5245be32-68f4-485b-b2da-b5835bb784af",
+      "name": "AI Agent"
     },
     {
       "parameters": {
-        "toolDescription": "Use this tool ONLY after the user has explicitly approved the generated user story and acceptance criteria. It creates a new work item in Plane via the FastAPI backend (not Plane directly).",
-        "method": "POST",
-        "url": "={{ ($env.AGENT_BACKEND_URL || 'http://localhost:8000') + '/api/plane/work-item' }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-Agent-Secret",
-              "value": "={{ $env.AGENT_N8N_WEBHOOK_SECRET }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ project_id: $fromAI('project_id', 'The alphanumeric Plane Project UUID from the chat (optional if default project is configured)'), name: $fromAI('story_title', 'A short, actionable title for the user story'), description_html: '<p>' + $fromAI('story_body', 'The full text of the user story following the As a... I want... so that... format') + '</p><br><h3>Acceptance Criteria</h3><p>' + $fromAI('acceptance_criteria', 'The finalized Given-When-Then criteria bullet points approved by the Scrum Master') + '</p>' }) }}",
         "options": {}
       },
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.4,
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
       "position": [
-        368,
-        224
+        -176,
+        -112
       ],
-      "id": "f197065a-40b8-45d7-9f38-1d8ef69b14ce",
-      "name": "Create Plane Work Item"
+      "id": "d517acae-7cb1-43b8-8caa-93fdde162662",
+      "name": "When chat message received",
+      "webhookId": "6514220b-600e-428b-9771-1b6f32a08521"
     }
   ],
   "pinData": {},
   "connections": {
-    "When chat message received": {
-      "main": [
+    "HTTP Request": {
+      "ai_tool": [
         [
           {
             "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Gemini Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
+            "type": "ai_tool",
             "index": 0
           }
         ]
@@ -131,12 +136,23 @@
         ]
       ]
     },
-    "Create Plane Work Item": {
-      "ai_tool": [
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
         [
           {
             "node": "AI Agent",
-            "type": "ai_tool",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
             "index": 0
           }
         ]
@@ -148,7 +164,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "3ca3c090-0418-4c0a-b768-06531d00b192",
+  "versionId": "c7024878-ac5e-4877-84b4-17a82f5a18e7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2a6210ed76df60ce4d0077186bc8260479e5ef362a2c0f358d5e3ccbf249ed35"
