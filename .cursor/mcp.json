@@ -6,7 +6,7 @@
     },
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest", "--api-key", "YOUR_CONTEXT7_API_KEY"]
+      "args": ["-y", "@upstash/context7-mcp@latest", "--api-key", "ctx7sk-a78c3765-9b8f-4b9b-88c3-024b6c1b1ff4"]
     }
   }
 }
