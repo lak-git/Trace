@@ -53,6 +53,14 @@ PROTECTED_ROUTES: list[tuple[str, str, dict[str, object] | None]] = [
             "summary_text": "Standup summary",
         },
     ),
+    (
+        "POST",
+        "/api/plane/work-item",
+        {
+            "name": "Login story",
+            "description_html": "<p>As a user I want to log in</p>",
+        },
+    ),
 ]
 
 

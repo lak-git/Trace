@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 from tenacity import RetryError, retry, stop_after_attempt, wait_exponential
 
-from app.model.plane import CycleUpdateResult, PlaneCycle, PlaneMember
+from app.model.plane import CycleUpdateResult, PlaneCycle, PlaneMember, WorkItemCreateResult
 
 logger = logging.getLogger(__name__)
 
@@ -160,3 +160,22 @@ class PlaneClient:
             json={"description": description},
         )
         return CycleUpdateResult(cycle_id=cycle_id, description=description, raw=payload)
+
+    async def create_work_item(
+        self,
+        name: str,
+        description_html: str,
+        project_id: str | None = None,
+    ) -> WorkItemCreateResult:
+        pid = project_id or self._project_id
+        payload = await self._request(
+            "POST",
+            f"projects/{pid}/work-items/",
+            json={"name": name, "description_html": description_html},
+        )
+        return WorkItemCreateResult(
+            id=str(payload.get("id", "")),
+            name=payload.get("name"),
+            description_html=payload.get("description_html"),
+            raw=payload,
+        )

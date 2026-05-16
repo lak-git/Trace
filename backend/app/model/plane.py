@@ -42,3 +42,16 @@ class CycleUpdateResult(BaseModel):
     cycle_id: str
     description: str
     raw: dict[str, Any]
+
+
+class CreateWorkItemRequest(BaseModel):
+    project_id: str | None = None
+    name: str
+    description_html: str
+
+
+class WorkItemCreateResult(BaseModel):
+    id: str
+    name: str | None = None
+    description_html: str | None = None
+    raw: dict[str, Any]

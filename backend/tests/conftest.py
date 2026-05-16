@@ -19,7 +19,7 @@ from app.core.config import get_settings
 from app.model.blocker import Blocker, BlockerSource, BlockerStatus
 from app.model.memory import CompactedSprintMemory, MemoryCompactResponse
 from app.model.participant import Participant, ParticipantRole
-from app.model.plane import CycleUpdateResult, PlaneMember
+from app.model.plane import CycleUpdateResult, PlaneMember, WorkItemCreateResult
 from app.model.standup import CommitFile, CommitStats, GitCommit
 
 TEST_SECRET = "test-secret"
@@ -205,6 +205,12 @@ def plane_client_mock() -> AsyncMock:
         PlaneMember(id="usr_bob_payment", display_name="Bob", email="bob@example.com"),
         PlaneMember(id="usr_carol_dashboard", display_name="Carol", email="carol@example.com"),
     ]
+    client.create_work_item.return_value = WorkItemCreateResult(
+        id="wi-123",
+        name="Sample story",
+        description_html="<p>body</p>",
+        raw={"id": "wi-123", "name": "Sample story"},
+    )
     client.aclose.return_value = None
     return client
 
