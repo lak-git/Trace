@@ -48,24 +48,33 @@ A standalone AI Scrum Master agent that automates repetitive tracking and commun
 .
 ├── backend/
 │   ├── app/
-│   │   ├── api/endpoints/     # FastAPI route handlers
-│   │   ├── core/              # Config, auth, logging
-│   │   ├── model/             # Pydantic models
-│   │   ├── service/           # plane_client, github_client, gemini_client, stores, standup_context
-│   │   ├── database.py        # supabase async client (service-role)
-│   │   └── main.py            # FastAPI app entry
+│   │   ├── api/
+│   │   │   ├── deps.py            # Reusable FastAPI dependencies (auth, supabase)
+│   │   │   └── endpoints/         # FastAPI route handlers
+│   │   ├── core/                  # Config, auth, logging
+│   │   ├── model/                 # Pydantic models
+│   │   ├── service/               # plane_client, github_client, gemini_client, stores, standup_context
+│   │   ├── database.py            # supabase async client (service-role)
+│   │   └── main.py                # FastAPI app entry
 │   ├── migrations/
-│   │   └── 001_initial.sql    # Canonical Supabase schema
-│   ├── pyproject.toml         # Python deps (uv)
+│   │   └── 001_initial.sql        # Canonical Supabase schema
+│   ├── tests/                     # pytest test suite (conftest.py + 7 test files)
+│   ├── pyproject.toml             # Python deps (uv)
+│   ├── ruff.toml                  # Ruff linter/formatter config
 │   ├── Dockerfile
 │   └── .dockerignore
 ├── n8n_workflows/
-│   ├── standup-pre-fetch.json     # Cron: fetch commits, prep context
-│   ├── daily-standup.json         # Chat Trigger: run standup
-│   ├── sprint-planning.json       # Chat Trigger: sprint intake
-│   ├── blocker-webhook.json       # Webhook: real-time blocker capture
-│   └── user-story-gen.json        # STRETCH: story generation
+│   ├── standup-pre-fetch.json     # Cron: fetch commits, prep context [IN PROGRESS — not yet exported]
+│   ├── daily-standup.json         # Chat Trigger: run standup [IN PROGRESS — not yet exported]
+│   ├── sprint-planning.json       # Chat Trigger: sprint intake [IN PROGRESS — not yet exported]
+│   ├── blocker-webhook.json       # Webhook: real-time blocker capture [IN PROGRESS — not yet exported]
+│   └── user-story-gen.json        # STRETCH: story generation [exported]
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                 # Lint + test + build-check on push
+│       └── deploy.yml             # Cloud Run deploy on main merge
 ├── AGENTS.md                  # Cursor agent mode instructions
+├── CHECKLIST.md               # Build checklist with phase-by-phase task tracking
 ├── SETUP.md                   # Pre-flight setup guide for team
 ├── PLAN.md                    # This file — project overview for team sync
 ├── .env.agent.example         # Environment variable template
@@ -186,14 +195,19 @@ Access pattern:
 
 ## 10. n8n Workflow Details
 
-### Workflow 1: `standup-pre-fetch` (Cron)
+> **Export status**: Only `user-story-gen.json` is currently exported to the repo.
+> `standup-pre-fetch`, `daily-standup`, `sprint-planning`, and `blocker-webhook` are
+> partially built in n8n Cloud but not yet exported. Export each via n8n → Download as JSON
+> and commit to `n8n_workflows/` when complete.
+
+### Workflow 1: `standup-pre-fetch` (Cron) — IN PROGRESS
 - **Trigger**: Cron (default `45 8 * * 1-5`, configurable via `STANDUP_CRON`)
 - **Steps**:
   1. HTTP Request → Backend `/api/context/prefetch?project_id=...&cycle_id=...`
   2. Backend returns compiled JSON per participant
   3. Postgres node → Upsert into `standup_context` table
 
-### Workflow 2: `daily-standup` (Chat Trigger)
+### Workflow 2: `daily-standup` (Chat Trigger) — IN PROGRESS
 - **Trigger**: Chat Trigger
 - **Nodes**: Chat Trigger → AI Agent (Gemini 3.1 Pro) → Postgres (memory) → HTTP Request (cycle update)
 - **AI Agent Tools**:
@@ -203,13 +217,13 @@ Access pattern:
 - **System Prompt**: Instructs agent on standup protocol: greet, go one-at-a-time, ask commit-driven questions, follow up on blockers, compact after each person, post summary at end.
 - **Critical**: This is a single workflow. Do NOT use Workflow Tool with sub-workflows that contain Wait nodes (known data return bug). All turn-taking logic lives in the AI Agent prompt.
 
-### Workflow 3: `sprint-planning` (Chat Trigger)
+### Workflow 3: `sprint-planning` (Chat Trigger) — IN PROGRESS
 - **Trigger**: Chat Trigger
 - **Nodes**: Chat Trigger → AI Agent → Postgres
 - **Flow**: SM describes sprint goals → agent asks clarifying questions → stores key facts in `sprint_memory`
 - **Output**: Key facts ready for the standup agent to reference
 
-### Workflow 4: `blocker-webhook` (Webhook)
+### Workflow 4: `blocker-webhook` (Webhook) — IN PROGRESS
 - **Trigger**: Webhook (GitHub push events)
 - **Steps**:
   1. Parse push payload via Code node
@@ -218,7 +232,7 @@ Access pattern:
   4. If commit message says "resolved" or "fixes": mark blocker as resolved
   5. (Optional) Send notification to n8n channel
 
-### Workflow 5: `user-story-gen` (Chat Trigger) — STRETCH
+### Workflow 5: `user-story-gen` (Chat Trigger) — STRETCH (exported)
 - **Trigger**: Chat Trigger
 - **Flow**: SM describes client needs → agent generates stories + acceptance criteria → SM reviews → agent creates via Plane API
 
