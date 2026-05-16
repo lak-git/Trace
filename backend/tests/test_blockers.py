@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import AsyncClient
 
-from app.model.blocker import BlockerReport, BlockerResolve, BlockerSource, BlockerStatus, BlockerUpdate
+from app.model.blocker import BlockerReport, BlockerSource, BlockerStatus
 from app.service.blocker_store import BlockerStore, _make_blocker_key
 from tests.conftest import AUTH
 
