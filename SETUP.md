@@ -131,22 +131,39 @@ Do **NOT** commit `.env.agent`. Confirm it is in `.gitignore`.
 
 ## Step 7 — Deploy Backend to Google Cloud Run
 
-Lakindu owns this. Steps:
+Deployment is automated via `.github/workflows/deploy.yml` on every push to `main`.
+It uses Workload Identity Federation (no long-lived keys) and pushes to Artifact Registry.
+
+For a **manual first-time deploy** (before CI secrets are configured):
 
 ```bash
-# Build and push to Google Container Registry
-gcloud builds submit --tag gcr.io/<project-id>/ai-scrum-master
+# Authenticate
+gcloud auth configure-docker asia-southeast1-docker.pkg.dev
+
+# Build and push to Artifact Registry
+export PROJECT_ID=<your-gcp-project-id>
+export REGION=asia-southeast1
+export REPO=<your-ar-repository>       # e.g. cloud-run-source-deploy
+export SERVICE=ai-scrum-master
+export IMAGE=$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/$SERVICE
+
+docker build -t $IMAGE:latest backend/
+docker push $IMAGE:latest
 
 # Deploy
-gcloud run deploy ai-scrum-master \
-  --image gcr.io/<project-id>/ai-scrum-master \
+gcloud run deploy $SERVICE \
+  --image $IMAGE:latest \
   --platform managed \
-  --region asia-southeast1 \
+  --region $REGION \
   --allow-unauthenticated \
-  --env-vars-file .env.cloud.json
+  --min-instances=1
 ```
 
-The backend URL will be something like `https://ai-scrum-master-xxxxx-uc.a.run.app`.
+Set runtime secrets via Secret Manager (as configured in `deploy.yml`):
+`SUPABASE_SERVICE_ROLE_KEY`, `PLANE_API_TOKEN`, `GEMINI_API_KEY`,
+`AGENT_N8N_WEBHOOK_SECRET`, `GITHUB_TOKEN`.
+
+The backend URL will be something like `https://ai-scrum-master-xxxxx-as.a.run.app`.
 
 Update this URL in n8n's HTTP Request nodes.
 

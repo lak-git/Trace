@@ -13,22 +13,34 @@ A standalone an Agentic Scrum Assistant that automates repetitive tracking and c
 .                               # Root — standalone project root
 ├── backend/                    # Python FastAPI backend
 │   ├── app/
-│   │   ├── api/endpoints/      # FastAPI route handlers
-│   │   ├── core/               # Config, auth, DB session
+│   │   ├── api/
+│   │   │   ├── deps.py         # Reusable FastAPI dependencies (auth, supabase)
+│   │   │   └── endpoints/      # FastAPI route handlers
+│   │   ├── core/               # Config, auth, logging
 │   │   ├── model/              # Pydantic models
-│   │   ├── service/            # Business logic (plane, github, memory)
-│   │   ├── database.py         # Supabase async connection
+│   │   ├── service/            # Business logic (plane, github, gemini, stores)
+│   │   ├── database.py         # Supabase async connection (service-role)
 │   │   └── main.py             # FastAPI app entry
+│   ├── migrations/
+│   │   └── 001_initial.sql     # Canonical Supabase schema
+│   ├── tests/                  # pytest test suite (conftest.py + 7 test files)
 │   ├── pyproject.toml          # Python deps (uv)
+│   ├── ruff.toml               # Ruff linter/formatter config
 │   ├── Dockerfile
 │   └── .dockerignore
 ├── n8n_workflows/              # n8n workflow JSON exports
-│   ├── standup-pre-fetch.json
-│   ├── daily-standup.json
-│   ├── sprint-planning.json
-│   ├── blocker-webhook.json
-│   └── user-story-gen.json     # STRETCH
+│   ├── standup-pre-fetch.json  # [IN PROGRESS — not yet exported]
+│   ├── daily-standup.json      # [IN PROGRESS — not yet exported]
+│   ├── sprint-planning.json    # [IN PROGRESS — not yet exported]
+│   ├── blocker-webhook.json    # [IN PROGRESS — not yet exported]
+│   └── user-story-gen.json     # STRETCH [exported]
+├── .github/
+│   └── workflows/
+│       ├── ci.yml              # Lint + test + build-check on push
+│       └── deploy.yml          # Cloud Run deploy on main merge (Workload Identity + Artifact Registry)
 ├── AGENTS.md
+├── CHECKLIST.md
+├── PLAN.md
 ├── SETUP.md
 ├── .env.agent.example
 ├── repomix.config.json
@@ -41,8 +53,10 @@ A standalone an Agentic Scrum Assistant that automates repetitive tracking and c
   `supabase>=2.4` async SDK (service role key) and from n8n via its Postgres node
 - Orchestration: n8n Cloud (track technology — must be central)
 - LLM: Gemini 3.1 Pro / Gemini 3 Flash via Google AI Studio (student credits)
+  — `GEMINI_MAX_OUTPUT_TOKENS` has a coded default of 512; not required in `.env.agent`
 - UI: n8n Chat Trigger (no Next.js, no React, no Tailwind)
-- Deployment: Google Cloud Run ($300 credits)
+- Deployment: Google Cloud Run via GitHub Actions (Workload Identity Federation + Artifact Registry)
+- Testing: pytest + pytest-asyncio (test suite in `backend/tests/`)
 - MCP Tools: Repomix (codebase context), Context7 (live library docs)
 
 ## Absolute Rules

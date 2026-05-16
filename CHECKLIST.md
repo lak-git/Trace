@@ -59,52 +59,52 @@
 **Owner: Stefan | Depends on: 0.2, 0.3, 0.4, 0.7**
 
 ### 1.1 — Project Structure
-- [ ] Create `backend/` directory tree
-- [ ] Create `backend/pyproject.toml` (deps: `fastapi`, `uvicorn[standard]`, `httpx`, `tenacity`, `pydantic`, `pydantic-settings`, `supabase>=2.4`, `google-genai`, `python-slugify`, `tzdata`)
-- [ ] Run `uv sync` — installs all dependencies
-- [ ] Create `backend/app/__init__.py`
+- [X] Create `backend/` directory tree
+- [X] Create `backend/pyproject.toml` (deps: `fastapi`, `uvicorn[standard]`, `httpx`, `tenacity`, `pydantic`, `pydantic-settings`, `supabase>=2.4`, `google-genai`, `python-slugify`, `tzdata`)
+- [X] Run `uv sync` — installs all dependencies
+- [X] Create `backend/app/__init__.py`
 
 ### 1.2 — Core Config & DB
-- [ ] `backend/app/core/__init__.py`
-- [ ] `backend/app/core/config.py` — load env vars via `pydantic-settings`
-- [ ] `backend/app/core/auth.py` — `X-Agent-Secret` dependency
-- [ ] `backend/app/api/deps.py` — reusable FastAPI dependencies (auth, supabase)
-- [ ] `backend/app/database.py` — async Supabase client (`create_async_client`) initialised in lifespan, exposed via `get_supabase()` dependency
+- [X] `backend/app/core/__init__.py`
+- [X] `backend/app/core/config.py` — load env vars via `pydantic-settings`
+- [X] `backend/app/core/auth.py` — `X-Agent-Secret` dependency
+- [X] `backend/app/api/deps.py` — reusable FastAPI dependencies (auth, supabase)
+- [X] `backend/app/database.py` — async Supabase client (`create_async_client`) initialised in lifespan, exposed via `get_supabase()` dependency
 - [ ] Run [backend/migrations/001_initial.sql](backend/migrations/001_initial.sql) in Supabase SQL editor
 
 ### 1.3 — Pydantic Models
-- [ ] `backend/app/model/__init__.py`
-- [ ] `backend/app/model/participant.py` — Participant, ParticipantRole, ParticipantUpsert
-- [ ] `backend/app/model/standup.py` — StandupContext, CompiledContext, ParticipantContext
-- [ ] `backend/app/model/memory.py` — AgentMemory, MemoryUpsert, CompactedSprintMemory
-- [ ] `backend/app/model/blocker.py` — Blocker, BlockerReport, BlockerUpdate, BlockerResolve
-- [ ] `backend/app/model/plane.py` — PlaneMember, PlaneCycle, PlaneIssue
+- [X] `backend/app/model/__init__.py`
+- [X] `backend/app/model/participant.py` — Participant, ParticipantRole, ParticipantUpsert
+- [X] `backend/app/model/standup.py` — StandupContext, CompiledContext, ParticipantContext
+- [X] `backend/app/model/memory.py` — AgentMemory, MemoryUpsert, CompactedSprintMemory
+- [X] `backend/app/model/blocker.py` — Blocker, BlockerReport, BlockerUpdate, BlockerResolve
+- [X] `backend/app/model/plane.py` — PlaneMember, PlaneCycle, PlaneIssue
 
 ### 1.4 — Service Layer
-- [ ] `backend/app/service/__init__.py`
-- [ ] `backend/app/service/plane_client.py` — typed async Plane API client with rate-limit throttle (60 req/min), tenacity retries
-- [ ] `backend/app/service/github_client.py` — fetch commits per github_login (or email fallback) since timestamp
-- [ ] `backend/app/service/gemini_client.py` — Gemini compaction via `google-genai`, bounded `max_output_tokens`
-- [ ] `backend/app/service/participant_store.py` — CRUD on `participants` via Supabase SDK
-- [ ] `backend/app/service/blocker_store.py` — CRUD on `blockers` via Supabase SDK
-- [ ] `backend/app/service/memory_store.py` — upsert `agent_memory`, `standup_context`, `sprint_memory` via Supabase SDK
-- [ ] `backend/app/service/standup_context.py` — role-aware compile of per-member context (Developer = commits + blockers + last memory; BA/QA = blockers + last memory)
+- [X] `backend/app/service/__init__.py`
+- [X] `backend/app/service/plane_client.py` — typed async Plane API client with rate-limit throttle (60 req/min), tenacity retries
+- [X] `backend/app/service/github_client.py` — fetch commits per github_login (or email fallback) since timestamp
+- [X] `backend/app/service/gemini_client.py` — Gemini compaction via `google-genai`, bounded `max_output_tokens`
+- [X] `backend/app/service/participant_store.py` — CRUD on `participants` via Supabase SDK
+- [X] `backend/app/service/blocker_store.py` — CRUD on `blockers` via Supabase SDK
+- [X] `backend/app/service/memory_store.py` — upsert `agent_memory`, `standup_context`, `sprint_memory` via Supabase SDK
+- [X] `backend/app/service/standup_context.py` — role-aware compile of per-member context (Developer = commits + blockers + last memory; BA/QA = blockers + last memory)
 
 ### 1.5 — API Endpoints
-- [ ] `backend/app/api/__init__.py`
-- [ ] `backend/app/api/endpoints/__init__.py`
-- [ ] `backend/app/api/endpoints/health.py` — `GET /api/health` (no auth)
-- [ ] `backend/app/api/endpoints/participant.py` — `POST /api/participants`, `GET /api/participants`
-- [ ] `backend/app/api/endpoints/context.py` — `GET /api/context/prefetch`
-- [ ] `backend/app/api/endpoints/memory.py` — `POST /api/memory/compact`, `POST /api/memory/upsert`, `GET /api/memory/{sprint_id}`
-- [ ] `backend/app/api/endpoints/plane.py` — `POST /api/plane/cycle-update`
-- [ ] `backend/app/api/endpoints/blocker.py` — `POST /api/blocker/report`, `POST /api/blocker/{key}/update`, `POST /api/blocker/{key}/resolve`, `GET /api/blockers/active`
+- [X] `backend/app/api/__init__.py`
+- [X] `backend/app/api/endpoints/__init__.py`
+- [X] `backend/app/api/endpoints/health.py` — `GET /api/health` (no auth)
+- [X] `backend/app/api/endpoints/participant.py` — `POST /api/participants`, `GET /api/participants`
+- [X] `backend/app/api/endpoints/context.py` — `GET /api/context/prefetch`
+- [X] `backend/app/api/endpoints/memory.py` — `POST /api/memory/compact`, `POST /api/memory/upsert`, `GET /api/memory/{sprint_id}`
+- [X] `backend/app/api/endpoints/plane.py` — `POST /api/plane/cycle-update`
+- [X] `backend/app/api/endpoints/blocker.py` — `POST /api/blocker/report`, `POST /api/blocker/{key}/update`, `POST /api/blocker/{key}/resolve`, `GET /api/blockers/active`
 
 ### 1.6 — App Entry & Router
-- [ ] `backend/app/main.py` — FastAPI app creation, include routers, CORS, lifespan
+- [X] `backend/app/main.py` — FastAPI app creation, include routers, CORS, lifespan
 
 ### 1.7 — Verify
-- [ ] `uv run uvicorn app.main:app` starts without errors
+- [X] `uv run uvicorn app.main:app` starts without errors
 - [ ] `curl localhost:8000/api/health` returns 200
 
 ---
@@ -113,21 +113,21 @@
 **Owner: Lakindu | Depends on: 1.6**
 
 ### 2.1 — Docker
-- [ ] `backend/Dockerfile` — Python 3.12 slim, uv install, uvicorn CMD
-- [ ] `backend/.dockerignore` — exclude `__pycache__`, `.venv`, `.env.*`
+- [X] `backend/Dockerfile` — Python 3.12 slim, uv install, uvicorn CMD
+- [X] `backend/.dockerignore` — exclude `__pycache__`, `.venv`, `.env.*`
 
 ### 2.2 — GitHub Actions CI
-- [ ] Create `.github/workflows/ci.yml`
-- [ ] Trigger on push to `dev` and `main`
-- [ ] Job: `lint` — `ruff check .`
-- [ ] Job: `test` — `pytest` (if tests exist)
-- [ ] Job: `build-check` — build Docker image (without deploying)
+- [X] Create `.github/workflows/ci.yml`
+- [X] Trigger on push to `dev` and `main`
+- [X] Job: `lint` — `ruff check .`
+- [X] Job: `test` — `pytest` (if tests exist)
+- [X] Job: `build-check` — build Docker image (without deploying)
 
 ### 2.3 — GitHub Actions CD
-- [ ] Add `deploy` job to same workflow
-- [ ] Conditional: `if: github.ref == 'refs/heads/main'`
-- [ ] Uses `google-github-actions/auth` + `google-github-actions/deploy-cloudrun`
-- [ ] Pass env vars via GitHub Secrets (or `.env.cloud.json`)
+- [X] Create `.github/workflows/deploy.yml` (separate from ci.yml)
+- [X] Conditional: triggers on push to `main`
+- [X] Uses Workload Identity Federation (`google-github-actions/auth`) + `google-github-actions/deploy-cloudrun`
+- [X] Pass env vars via GitHub Actions vars/secrets; sensitive values via Secret Manager
 
 ### 2.4 — Cloud Run Deploy (First Time)
 - [ ] Push `dev` branch
@@ -142,17 +142,17 @@
 **Owner: Saviskar + Stefan | Depends on: 1.5, 2.4**
 
 ### 3.1 — Backend: `/api/context/prefetch`
-- [ ] Read cycle members from Plane (`plane_client.get_cycle_members`)
-- [ ] For each member: fetch GitHub commits since last standup (`github_client.get_commits_by_email`)
-- [ ] For each member: fetch active blockers from Supabase
-- [ ] Compile context object per member
-- [ ] Upsert into `standup_context` table
-- [ ] Return compiled context as JSON
+- [X] Read cycle members from Plane (`plane_client.get_cycle_members`)
+- [X] For each member: fetch GitHub commits since last standup (`github_client.get_commits_by_email`)
+- [X] For each member: fetch active blockers from Supabase
+- [X] Compile context object per member
+- [X] Upsert into `standup_context` table
+- [X] Return compiled context as JSON
 
 ### 3.2 — n8n: `standup-pre-fetch.json`
-- [ ] Cron trigger node (default: `45 8 * * 1-5`)
-- [ ] HTTP Request node → `POST /api/context/prefetch?project_id=X&cycle_id=Y`
-- [ ] Postgres node → verify data landed in `standup_context`
+- [~] Cron trigger node (default: `45 8 * * 1-5`)
+- [~] HTTP Request node → `POST /api/context/prefetch?project_id=X&cycle_id=Y`
+- [~] Postgres node → verify data landed in `standup_context`
 - [ ] Add error handling (retry 1x on failure)
 - [ ] Import and test in n8n Cloud
 
@@ -162,37 +162,37 @@
 **Owner: Saviskar + Stefan | Depends on: 3.1**
 
 ### 4.1 — Backend: `/api/memory/compact`
-- [ ] Accept raw transcript text
-- [ ] Call Gemini to compact into 2-3 sentence summary
-- [ ] Return compacted summary
+- [X] Accept raw transcript text
+- [X] Call Gemini to compact into 2-3 sentence summary
+- [X] Return compacted summary
 
 ### 4.2 — Backend: `/api/memory/upsert`
-- [ ] Accept `participant_id`, `sprint_id`, `standup_date`, `summary`, `importance`
-- [ ] Upsert into `agent_memory` table
-- [ ] Return created/updated record
+- [X] Accept `participant_id`, `sprint_id`, `standup_date`, `summary`, `importance`
+- [X] Upsert into `agent_memory` table
+- [X] Return created/updated record
 
 ### 4.3 — Backend: `/api/plane/cycle-update`
-- [ ] Accept `cycle_id` and `summary_text`
-- [ ] Fetch current cycle description from Plane
-- [ ] Append new summary to existing description
-- [ ] PATCH cycle with updated description
+- [X] Accept `cycle_id` and `summary_text`
+- [X] Fetch current cycle description from Plane
+- [X] Append new summary to existing description
+- [X] PATCH cycle with updated description
 
 ### 4.4 — n8n: `daily-standup.json`
-- [ ] Chat Trigger node
-- [ ] AI Agent node (Gemini 3.1 Pro / 3 Flash)
-- [ ] Tools available to AI Agent:
-  - [ ] Postgres: read `standup_context` for current sprint
-  - [ ] Postgres: read `blockers` (active)
+- [~] Chat Trigger node
+- [~] AI Agent node (Gemini 3.1 Pro / 3 Flash)
+- [~] Tools available to AI Agent:
+  - [~] Postgres: read `standup_context` for current sprint
+  - [~] Postgres: read `blockers` (active)
   - [ ] Postgres: write to `agent_memory`
   - [ ] HTTP Request: `POST /api/memory/compact`
   - [ ] HTTP Request: `POST /api/plane/cycle-update`
 
 ### 4.5 — System Prompt (in n8n AI Agent)
-- [ ] Greet team: "Good morning team!"
-- [ ] Go one person at a time
-- [ ] For each: load their commits + blockers from pre-fetched context
-- [ ] Ask about specific commits (e.g. "I see 2 commits on feat/biometrics...")
-- [ ] Follow up if blocker exists from yesterday
+- [~] Greet team: "Good morning team!"
+- [~] Go one person at a time
+- [~] For each: load their commits + blockers from pre-fetched context
+- [~] Ask about specific commits (e.g. "I see 2 commits on feat/biometrics...")
+- [~] Follow up if blocker exists from yesterday
 - [ ] On "done" / "next" → compact that segment, store to agent_memory
 - [ ] After all done → post full summary to chat
 - [ ] Call `/api/plane/cycle-update` to write to Plane
@@ -209,11 +209,11 @@
 **Owner: Saviskar | Depends on: 1.5, 2.4**
 
 ### 5.1 — Backend: sprint memory endpoints (if separate)
-- [ ] Confirm `POST /api/memory/upsert` handles sprint_memory table too, OR create dedicated endpoint
+- [X] `POST /api/memory/upsert` handles sprint_memory table (confirmed via memory_store.py)
 
 ### 5.2 — n8n: `sprint-planning.json`
-- [ ] Chat Trigger node (Scrum Master only)
-- [ ] AI Agent node
+- [~] Chat Trigger node (Scrum Master only)
+- [~] AI Agent node
 - [ ] System prompt: store sprint goals, decisions, boundaries in `sprint_memory`
 - [ ] Postgres tool: write to `sprint_memory`
 - [ ] Test: SM describes Sprint 7 goals → verify in Supabase
@@ -224,17 +224,17 @@
 **Owner: Saviskar | Depends on: 1.5, 2.4**
 
 ### 6.1 — Backend: `/api/blocker/report`
-- [ ] Accept `participant_id`, `description`, `source`, optional `github_url`
-- [ ] Insert into `blockers` table
-- [ ] Return created record
+- [X] Accept `participant_id`, `description`, `source`, optional `github_url`
+- [X] Insert into `blockers` table
+- [X] Return created record
 
 ### 6.2 — Backend: `/api/blockers/active`
-- [ ] Accept optional `project_id`, `cycle_id`
-- [ ] Return active blockers
+- [X] Accept optional `project_id`, `cycle_id`
+- [X] Return active blockers
 
 ### 6.3 — n8n: `blocker-webhook.json`
-- [ ] Webhook node (GitHub push events)
-- [ ] Code node: parse push payload, check each commit for `[BLOCKED]`
+- [~] Webhook node (GitHub push events)
+- [~] Code node: parse push payload, check each commit for `[BLOCKED]`
 - [ ] If found: HTTP Request → `POST /api/blocker/report`
 - [ ] If commit contains "resolved" or "fixes": mark blocker as resolved (or call update endpoint)
 - [ ] Test: push a commit with `[BLOCKED]` → verify in Supabase

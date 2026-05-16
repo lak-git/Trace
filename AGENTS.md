@@ -54,24 +54,42 @@ uv run ruff format .           # Format
 .
 ├── backend/
 │   ├── app/
-│   │   ├── api/endpoints/     # FastAPI route handlers
-│   │   ├── core/              # Config, auth, logging
-│   │   ├── model/             # Pydantic models
-│   │   ├── service/           # Business logic (plane, github, gemini, stores)
-│   │   ├── database.py        # supabase async client (service-role)
-│   │   └── main.py            # FastAPI app entry
+│   │   ├── api/
+│   │   │   ├── deps.py            # Reusable FastAPI dependencies (auth, supabase)
+│   │   │   └── endpoints/         # FastAPI route handlers
+│   │   ├── core/                  # Config, auth, logging
+│   │   ├── model/                 # Pydantic models
+│   │   ├── service/               # Business logic (plane, github, gemini, stores)
+│   │   ├── database.py            # supabase async client (service-role)
+│   │   └── main.py                # FastAPI app entry
 │   ├── migrations/
-│   │   └── 001_initial.sql    # Canonical Supabase schema
-│   ├── pyproject.toml         # Python deps (uv)
+│   │   └── 001_initial.sql        # Canonical Supabase schema
+│   ├── tests/                     # pytest test suite
+│   │   ├── conftest.py            # Fixtures and mocks
+│   │   ├── test_auth.py
+│   │   ├── test_blockers.py
+│   │   ├── test_context.py
+│   │   ├── test_health.py
+│   │   ├── test_memory.py
+│   │   ├── test_participants.py
+│   │   └── test_plane.py
+│   ├── pyproject.toml             # Python deps (uv)
+│   ├── ruff.toml                  # Ruff linter/formatter config
 │   ├── Dockerfile
 │   └── .dockerignore
 ├── n8n_workflows/
-│   ├── standup-pre-fetch.json     # Cron: fetch commits, prep context
-│   ├── daily-standup.json         # Chat Trigger: run standup
-│   ├── sprint-planning.json       # Chat Trigger: sprint intake
-│   ├── blocker-webhook.json       # Webhook: real-time blocker capture
-│   └── user-story-gen.json        # STRETCH: story generation
+│   ├── standup-pre-fetch.json     # Cron: fetch commits, prep context [IN PROGRESS — not yet exported]
+│   ├── daily-standup.json         # Chat Trigger: run standup [IN PROGRESS — not yet exported]
+│   ├── sprint-planning.json       # Chat Trigger: sprint intake [IN PROGRESS — not yet exported]
+│   ├── blocker-webhook.json       # Webhook: real-time blocker capture [IN PROGRESS — not yet exported]
+│   └── user-story-gen.json        # STRETCH: story generation [exported]
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                 # Lint + test + build-check on push
+│       └── deploy.yml             # Cloud Run deploy on main merge
 ├── AGENTS.md
+├── CHECKLIST.md
+├── PLAN.md
 ├── SETUP.md
 ├── .env.agent.example
 ├── repomix.config.json
@@ -144,13 +162,13 @@ Pydantic models live in `backend/app/model/*.py`, not in `service/`.
 
 ## n8n Workflows
 
-| Workflow | Trigger | Purpose |
-|---|---|---|
-| `standup-pre-fetch` | Cron (T-45min) | Fetch members+commits+blockers → store in Supabase |
-| `daily-standup` | Chat Trigger | Load context → run standup per member → compact → store |
-| `sprint-planning` | Chat Trigger | Scrum Master pastes sprint details → agent stores key facts |
-| `blocker-webhook` | Webhook (GitHub push) | Detect `[BLOCKED]` commits → store/update blocker in Supabase |
-| `user-story-gen` | Chat Trigger (stretch) | SM describes client needs → agent generates stories + criteria |
+| Workflow | Trigger | Purpose | Status |
+|---|---|---|---|
+| `standup-pre-fetch` | Cron (T-45min) | Fetch members+commits+blockers → store in Supabase | In progress — not yet exported to repo |
+| `daily-standup` | Chat Trigger | Load context → run standup per member → compact → store | In progress — not yet exported to repo |
+| `sprint-planning` | Chat Trigger | Scrum Master pastes sprint details → agent stores key facts | In progress — not yet exported to repo |
+| `blocker-webhook` | Webhook (GitHub push) | Detect `[BLOCKED]` commits → store/update blocker in Supabase | In progress — not yet exported to repo |
+| `user-story-gen` | Chat Trigger (stretch) | SM describes client needs → agent generates stories + criteria | Exported to repo |
 
 ---
 
