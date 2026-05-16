@@ -3,9 +3,11 @@ name: CI
 on:
   push:
     branches:
+      - main
       - dev
   pull_request:
     branches:
+      - main
       - dev
 
 jobs:
@@ -62,9 +64,7 @@ jobs:
         run: uv sync --frozen
 
       - name: Run pytest
-        # Exit code 5 means "no tests collected" — acceptable until tests are added.
-        # Any other non-zero exit is a real failure and will still break the build.
-        run: uv run pytest || test $? -eq 5
+        run: uv run pytest -v
 
   build:
     name: Docker Build
