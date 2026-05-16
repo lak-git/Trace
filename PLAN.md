@@ -257,25 +257,6 @@ Access pattern:
 
 ## 12. Demo Scenario — FinanceFlow Sprint 7
 
-**Product**: Mobile banking app "FinanceFlow"
-
-**Sprint**: 7 (2 weeks, currently Day 3)
-
-**Team**:
-- **Alice** (Lakindu) — `feat/biometrics` — FaceID/TouchID login
-- **Bob** (Stefan) — `fix/payment-timeout` — Payment retry with circuit breaker
-- **Carol** (Saviskar) — `feat/dashboard` — Account summary dashboard
-
-**Pre-seeded Plane Data**:
-- Sprint 7 cycle is active
-- 3 work items assigned (one per member), each in "In Progress"
-- 1 blocker: Bob's CI test flakiness noted from Day 2 standup
-
-**Pre-seeded GitHub Commits (last 24h)**:
-- Alice: `feat(biometrics): add FaceID enrollment flow` + `fix(biometrics): handle cancelled auth`
-- Bob: `fix(payment-timeout): add circuit breaker` + `fix(payment-timeout): flaky test WIP`
-- Carol: `feat(dashboard): transaction list component`
-
 **Demo Script (2 Minutes)**:
 
 | Time | What Happens | Judge Sees |

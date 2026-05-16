@@ -182,25 +182,6 @@ Update this URL in n8n's HTTP Request nodes.
 
 ---
 
-## Demo Script: FinanceFlow Sprint 7
-
-**Product:** Mobile banking app "FinanceFlow"
-**Sprint:** 7 (2 weeks, Day 3)
-
-**Team:**
-- Alice (Lakindu) — `feat/biometrics` — FaceID/TouchID login
-- Bob (Stefan) — `fix/payment-timeout` — Payment retry with circuit breaker
-- Carol (Saviskar) — `feat/dashboard` — Account summary dashboard
-
-**Pre-seeded Plane data:**
-- Sprint 7 cycle active
-- 3 issues assigned (one per member), each in "In Progress"
-- 1 blocker: Bob's CI test flakiness noted from Day 2
-
-**Pre-seeded GitHub commits (last 24h):**
-- Alice: `feat(biometrics): add FaceID enrollment flow` + `fix(biometrics): handle cancelled auth`
-- Bob: `fix(payment-timeout): add circuit breaker` + `fix(payment-timeout): flaky test WIP`
-- Carol: `feat(dashboard): transaction list component`
 
 **Demo flow (2 mins):**
 1. Show n8n workflow canvas (pre-fetch ran 45min ago) — 15s
