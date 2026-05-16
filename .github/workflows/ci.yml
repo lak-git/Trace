@@ -62,7 +62,9 @@ jobs:
         run: uv sync --frozen
 
       - name: Run pytest
-        run: uv run pytest --tb=short -q
+        # Exit code 5 means "no tests collected" — acceptable until tests are added.
+        # Any other non-zero exit is a real failure and will still break the build.
+        run: uv run pytest || test $? -eq 5
 
   build:
     name: Docker Build
