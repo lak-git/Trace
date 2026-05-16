@@ -55,15 +55,16 @@ uv run ruff format .           # Format
 ├── backend/
 │   ├── app/
 │   │   ├── api/endpoints/     # FastAPI route handlers
-│   │   ├── core/              # Config, auth, DB session
+│   │   ├── core/              # Config, auth, logging
 │   │   ├── model/             # Pydantic models
-│   │   ├── service/           # Business logic (plane, github, memory)
-│   │   ├── database.py        # Supabase async connection
+│   │   ├── service/           # Business logic (plane, github, gemini, stores)
+│   │   ├── database.py        # supabase async client (service-role)
 │   │   └── main.py            # FastAPI app entry
+│   ├── migrations/
+│   │   └── 001_initial.sql    # Canonical Supabase schema
 │   ├── pyproject.toml         # Python deps (uv)
 │   ├── Dockerfile
-│   ├── .dockerignore
-│   └── .env.example
+│   └── .dockerignore
 ├── n8n_workflows/
 │   ├── standup-pre-fetch.json     # Cron: fetch commits, prep context
 │   ├── daily-standup.json         # Chat Trigger: run standup
@@ -103,22 +104,25 @@ uv run ruff format .           # Format
 
 ## Environment Variables Reference
 
-All agent env vars live in `.env.agent`. The `.env.example` file must always match.
+All agent env vars live in `.env.agent`. The `.env.agent.example` file (at the repo root) must always match.
 
-| Variable | Purpose |
-|---|---|
-| `SUPABASE_DATABASE_URL` | PostgreSQL connection string (pooler, port 5432) |
-| `PLANE_API_BASE_URL` | `https://api.plane.so/api/v1` |
-| `PLANE_API_TOKEN` | Plane API key — `X-API-Key` header, `plane_api_<token>` |
-| `PLANE_WORKSPACE_SLUG` | Workspace slug from app.plane.so URL |
-| `PLANE_PROJECT_ID` | Default project UUID |
-| `GEMINI_API_KEY` | Google AI Studio API key (student credits) |
-| `GEMINI_MODEL` | Model name, e.g. `gemini-3.1-pro` or `gemini-3-flash` |
-| `STANDUP_CRON` | Cron expression for pre-fetch (default: `45 8 * * 1-5`) |
-| `STANDUP_TIMEZONE` | Timezone for standup scheduling |
-| `AGENT_N8N_WEBHOOK_SECRET` | Shared secret for n8n → agent webhooks |
-| `GITHUB_TOKEN` | GitHub personal access token (repo scope) |
-| `GITHUB_REPO` | Shared repo in format `owner/repo` |
+| Variable | Used by | Purpose |
+|---|---|---|
+| `SUPABASE_URL` | Backend | Supabase project URL for the async SDK |
+| `SUPABASE_ANON_KEY` | n8n | Public anon key (not used by the backend) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend ONLY | Service-role JWT for the async SDK; bypasses RLS |
+| `SUPABASE_DATABASE_URL` | n8n | Postgres pooler conn string (port 5432) for n8n's Postgres node |
+| `PLANE_API_BASE_URL` | Backend | `https://api.plane.so/api/v1` |
+| `PLANE_API_TOKEN` | Backend | Plane API key — `X-API-Key` header, `plane_api_<token>` |
+| `PLANE_WORKSPACE_SLUG` | Backend | Workspace slug from app.plane.so URL |
+| `PLANE_PROJECT_ID` | Backend | Default project UUID |
+| `GEMINI_API_KEY` | Backend | Google AI Studio API key (student credits) |
+| `GEMINI_MODEL` | Backend | Model name, e.g. `gemini-3.1-pro` or `gemini-3-flash` |
+| `STANDUP_CRON` | n8n | Cron expression for pre-fetch (default: `45 8 * * 1-5`) |
+| `STANDUP_TIMEZONE` | n8n | Timezone for standup scheduling |
+| `AGENT_N8N_WEBHOOK_SECRET` | Backend + n8n | Shared secret for n8n -> agent webhooks |
+| `GITHUB_TOKEN` | Backend | GitHub personal access token (repo scope) |
+| `GITHUB_REPO` | Backend | Shared repo in format `owner/repo` |
 
 ---
 
@@ -126,11 +130,15 @@ All agent env vars live in `.env.agent`. The `.env.example` file must always mat
 
 | Module | Responsibility |
 |---|---|
-| `service/plane_client.py` | All Plane REST API calls — typed async, Pydantic returns |
-| `service/github_client.py` | Fetch commits per user, parse commit messages |
-| `service/memory_store.py` | Read/write/upsert agent memory in Supabase |
-| `service/memory_schema.py` | Pydantic models for memory entries |
-| `service/standup_context.py` | Compile per-member context for standup |
+| `service/plane_client.py` | All Plane REST API calls — typed async, Pydantic returns, 60 req/min throttle |
+| `service/github_client.py` | Fetch commits per github_login since timestamp |
+| `service/gemini_client.py` | Compaction via `google-genai`, bounded `max_output_tokens` |
+| `service/participant_store.py` | CRUD on `participants` via Supabase async SDK |
+| `service/blocker_store.py` | CRUD on `blockers` via Supabase async SDK |
+| `service/memory_store.py` | Upsert `agent_memory`, `standup_context`, `sprint_memory` via Supabase async SDK |
+| `service/standup_context.py` | Role-aware per-member compile (Developer = commits + blockers + last memory; BA/QA = blockers + last memory) |
+
+Pydantic models live in `backend/app/model/*.py`, not in `service/`.
 
 ---
 

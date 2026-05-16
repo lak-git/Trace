@@ -36,8 +36,9 @@ A standalone an Agentic Scrum Assistant that automates repetitive tracking and c
 ```
 
 ## Stack
-- Backend: Python 3.11+, FastAPI, httpx (async), tenacity (retries), Pydantic v2
-- Database: Supabase PostgreSQL (ap-southeast-1)
+- Backend: Python 3.12+, FastAPI, httpx (async), tenacity (retries), Pydantic v2
+- Database: Supabase PostgreSQL (ap-southeast-1), accessed from the backend via the
+  `supabase>=2.4` async SDK (service role key) and from n8n via its Postgres node
 - Orchestration: n8n Cloud (track technology — must be central)
 - LLM: Gemini 3.1 Pro / Gemini 3 Flash via Google AI Studio (student credits)
 - UI: n8n Chat Trigger (no Next.js, no React, no Tailwind)
