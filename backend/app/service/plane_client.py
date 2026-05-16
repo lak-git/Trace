@@ -73,7 +73,7 @@ class PlaneClient:
         *,
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> Any:
         await self._throttle()
         try:
             response = await self._client.request(
@@ -100,10 +100,20 @@ class PlaneClient:
     async def list_project_members(self, project_id: str | None = None) -> list[PlaneMember]:
         pid = project_id or self._project_id
         payload = await self._request("GET", f"projects/{pid}/project-members/")
-        items = payload.get("results", payload if isinstance(payload, list) else [])
+        if isinstance(payload, list):
+            items = payload
+        elif isinstance(payload, dict):
+            results = payload.get("results")
+            items = results if isinstance(results, list) else []
+        else:
+            items = []
         members: list[PlaneMember] = []
         for item in items:
+            if not isinstance(item, dict):
+                continue
             member = item.get("member") or item.get("user") or item
+            if not isinstance(member, dict):
+                continue
             member_id = str(member.get("id") or item.get("member_id") or item.get("id"))
             members.append(
                 PlaneMember(
