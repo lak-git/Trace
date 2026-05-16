@@ -70,3 +70,89 @@ async def test_prefetch_idempotent(client: AsyncClient) -> None:
     assert first.status_code == 200
     assert second.status_code == 200
     assert first.json() == second.json()
+
+
+@pytest.mark.asyncio
+async def test_prefetch_does_not_persist_raw_commits(client: AsyncClient, memory_store_mock) -> None:
+    await client.get("/api/context/prefetch?cycle_id=sprint-7", headers=AUTH)
+    memory_store_mock.upsert_context.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_compact_commits_returns_summaries(client: AsyncClient) -> None:
+    prefetch = await client.get("/api/context/prefetch?cycle_id=sprint-7", headers=AUTH)
+    alice = prefetch.json()["data"][0]
+    compiled = await client.post(
+        "/api/context/commits/compact",
+        headers=AUTH,
+        json={
+            "sprint_id": alice["sprint_id"],
+            "participant_id": alice["participant_id"],
+            "display_name": "Alice",
+            "commits": [
+                {
+                    "sha": commit["sha"],
+                    "message": commit["message"],
+                    "url": commit["url"],
+                    "date": commit["date"],
+                }
+                for commit in alice["commits"]
+            ],
+            "has_recent_commits": True,
+        },
+    )
+    assert compiled.status_code == 200
+    payload = compiled.json()["data"]
+    assert len(payload["commits"]) == 2
+    assert all(commit["summary"] for commit in payload["commits"])
+    assert payload["activity_summary"]
+
+
+@pytest.mark.asyncio
+async def test_store_context_requires_compacted_summaries(client: AsyncClient) -> None:
+    response = await client.post(
+        "/api/context/store",
+        headers=AUTH,
+        json={
+            "sprint_id": "sprint-7",
+            "participant_id": "usr_alice_biometrics",
+            "commits": [
+                {
+                    "sha": "commit1",
+                    "message": "feat: biometrics",
+                    "url": "https://example/commit1",
+                    "date": "2026-05-16T08:00:00+00:00",
+                }
+            ],
+            "blockers": [],
+        },
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_store_context_persists_compacted_commits(
+    client: AsyncClient,
+    memory_store_mock,
+) -> None:
+    response = await client.post(
+        "/api/context/store",
+        headers=AUTH,
+        json={
+            "sprint_id": "sprint-7",
+            "participant_id": "usr_alice_biometrics",
+            "commits": [
+                {
+                    "sha": "commit1",
+                    "message": "feat: biometrics",
+                    "url": "https://example/commit1",
+                    "date": "2026-05-16T08:00:00+00:00",
+                    "summary": "Implemented FaceID flow scaffolding.",
+                }
+            ],
+            "blockers": [],
+            "last_summary": "Previous summary",
+        },
+    )
+    assert response.status_code == 200
+    memory_store_mock.upsert_context.assert_called_once()
