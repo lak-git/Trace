@@ -16,7 +16,7 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "X-API-Key",
+              "name": "X-Agent-Secret",
               "value": "={{ $vars.AGENT_SECRET }}"
             },
             {
@@ -26,18 +26,8 @@
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "name",
-              "value": "={{ $fromAI('story_title', 'A short, actionable title for the user story') }}"
-            },
-            {
-              "name": "description_html",
-              "value": "=<p>{{ $fromAI('story_body', 'The full text of the user story following the As a... I want... so that... format') }}</p><br><h3>Acceptance Criteria</h3><p>{{ $fromAI('acceptance_criteria', 'The finalized Given-When-Then criteria bullet points approved by the Scrum Master') }}</p>"
-            }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": {{ JSON.stringify($fromAI('story_title', 'A short, actionable title for the user story')) }},\n  \"description_html\": {{ JSON.stringify(\n    \"<p>\" + \n    $fromAI('story_body', 'The full text of the user story following the As a... I want... so that... format') + \n    \"</p><br><h3>Acceptance Criteria</h3><p>\" + \n    $fromAI('acceptance_criteria', 'The finalized Given-When-Then criteria bullet points approved by the Scrum Master') + \n    \"</p>\"\n  ) }}\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequestTool",
@@ -99,6 +89,8 @@
     },
     {
       "parameters": {
+        "public": true,
+        "initialMessages": "How can I assist you today?",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
@@ -159,12 +151,12 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "c7024878-ac5e-4877-84b4-17a82f5a18e7",
+  "versionId": "3ed05e67-1eec-4023-875f-4312c7974bc3",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2a6210ed76df60ce4d0077186bc8260479e5ef362a2c0f358d5e3ccbf249ed35"
