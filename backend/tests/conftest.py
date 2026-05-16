@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.model.blocker import Blocker, BlockerSource, BlockerStatus
 from app.model.memory import CompactedSprintMemory, MemoryCompactResponse
 from app.model.participant import Participant, ParticipantRole
-from app.model.plane import CycleUpdateResult
+from app.model.plane import CycleUpdateResult, WorkItemCreateResult
 
 TEST_SECRET = "test-secret"
 AUTH = {"X-Agent-Secret": TEST_SECRET}
@@ -133,6 +133,12 @@ def plane_client_mock() -> AsyncMock:
         cycle_id="sprint-7",
         description="Existing\n\nNew summary",
         raw={"ok": True},
+    )
+    client.create_work_item.return_value = WorkItemCreateResult(
+        id="wi-123",
+        name="Sample story",
+        description_html="<p>body</p>",
+        raw={"id": "wi-123", "name": "Sample story"},
     )
     client.aclose.return_value = None
     return client
