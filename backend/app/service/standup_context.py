@@ -3,7 +3,13 @@ from zoneinfo import ZoneInfo
 
 from app.core.config import Settings
 from app.model.participant import Participant, ParticipantRole
-from app.model.standup import CompiledContext, GitCommit, ParticipantContext, StandupContext
+from app.model.standup import (
+    CompiledContext,
+    GitCommit,
+    ParticipantContext,
+    StandupContext,
+    StoredCommit,
+)
 from app.service.blocker_store import BlockerStore
 from app.service.github_client import GitHubClient
 from app.service.memory_store import MemoryStore
@@ -52,6 +58,21 @@ class StandupContextService:
             )
         return sanitized
 
+    @staticmethod
+    def _prefetch_commit_rows(commits: list[GitCommit]) -> list[StoredCommit]:
+        rows: list[StoredCommit] = []
+        for commit in StandupContextService._strip_transient_commit_fields(commits):
+            rows.append(
+                StoredCommit(
+                    sha=commit.sha,
+                    message=(commit.message or "").split("\n", maxsplit=1)[0].strip() or None,
+                    url=commit.url,
+                    date=commit.date,
+                    summary=None,
+                ),
+            )
+        return rows
+
     async def compile_context(
         self,
         project_id: str,
@@ -62,7 +83,7 @@ class StandupContextService:
         window_start, window_end = self._standup_window()
         from_time = since or window_start
         plane_members = await self._plane_client.list_project_members(project_id=project_id)
-        stored_context: list[StandupContext] = []
+        context_rows: list[StandupContext] = []
         participant_contexts: list[ParticipantContext] = []
         missing_participants: list[Participant] = []
 
@@ -110,15 +131,15 @@ class StandupContextService:
                     )
                     commits = [latest_commit] if latest_commit else []
 
-            context = StandupContext(
-                sprint_id=sprint_id,
-                participant_id=participant.plane_user_id,
-                commits=self._strip_transient_commit_fields(commits),
-                blockers=blockers,
-                last_summary=last_summary,
+            context_rows.append(
+                StandupContext(
+                    sprint_id=sprint_id,
+                    participant_id=participant.plane_user_id,
+                    commits=self._prefetch_commit_rows(commits),
+                    blockers=blockers,
+                    last_summary=last_summary,
+                ),
             )
-            stored = await self._memory_store.upsert_context(context)
-            stored_context.append(stored)
             participant_contexts.append(
                 ParticipantContext(
                     participant_id=participant.plane_user_id,
@@ -138,6 +159,6 @@ class StandupContextService:
                 cycle_id=cycle_id,
                 participants=participant_contexts,
             ),
-            stored_context,
+            context_rows,
             missing_participants,
         )

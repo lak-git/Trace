@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.deps import (
     get_blocker_store,
+    get_gemini_client,
     get_github_client,
     get_memory_store,
     get_participant_store,
@@ -13,8 +14,9 @@ from app.api.deps import (
 )
 from app.core.auth import verify_webhook_secret
 from app.core.config import Settings, get_settings
-from app.model.standup import ContextPrefetchRequest
+from app.model.standup import CommitsCompactRequest, ContextPrefetchRequest, StandupContext
 from app.service.blocker_store import BlockerStore
+from app.service.gemini_client import GeminiClient
 from app.service.github_client import GitHubClient
 from app.service.memory_store import MemoryStore
 from app.service.participant_store import ParticipantStore
@@ -34,6 +36,7 @@ BlockerStoreDep = Annotated[BlockerStore, Depends(get_blocker_store)]
 MemoryStoreDep = Annotated[MemoryStore, Depends(get_memory_store)]
 PlaneClientDep = Annotated[PlaneClient, Depends(get_plane_client)]
 GitHubClientDep = Annotated[GitHubClient, Depends(get_github_client)]
+GeminiClientDep = Annotated[GeminiClient, Depends(get_gemini_client)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
@@ -47,7 +50,7 @@ async def _prefetch(
     settings: SettingsDep,
 ) -> dict[str, object] | JSONResponse:
     try:
-        compiled, stored_context, missing = await StandupContextService(
+        compiled, context_rows, missing = await StandupContextService(
             participant_store=participant_store,
             blocker_store=blocker_store,
             memory_store=memory_store,
@@ -64,7 +67,7 @@ async def _prefetch(
             "success": True,
             "data": {
                 "compiled": compiled.model_dump(mode="json"),
-                "stored_context": [item.model_dump(mode="json") for item in stored_context],
+                "context_rows": [item.model_dump(mode="json") for item in context_rows],
                 "missing_participants": [item.model_dump(mode="json") for item in missing],
             },
         }
@@ -117,4 +120,50 @@ async def prefetch_context_get(
     )
     if isinstance(result, JSONResponse):
         return result
-    return {"success": True, "data": result["data"]["stored_context"]}
+    return {"success": True, "data": result["data"]["context_rows"]}
+
+
+@router.post("/commits/compact", response_model=None)
+async def compact_commits(
+    payload: CommitsCompactRequest,
+    gemini: GeminiClientDep,
+) -> dict[str, object] | JSONResponse:
+    try:
+        commits, activity_summary = await gemini.compact_commits(
+            display_name=payload.display_name,
+            commits=payload.commits,
+            has_recent_commits=payload.has_recent_commits,
+        )
+        return {
+            "success": True,
+            "data": {
+                "sprint_id": payload.sprint_id,
+                "participant_id": payload.participant_id,
+                "commits": [item.model_dump(mode="json") for item in commits],
+                "activity_summary": activity_summary,
+            },
+        }
+    except Exception as exc:
+        logger.exception("Failed to compact commits")
+        return JSONResponse({"success": False, "error": str(exc)}, status_code=400)
+
+
+@router.post("/store", response_model=None)
+async def store_context(
+    payload: StandupContext,
+    memory_store: MemoryStoreDep,
+) -> dict[str, object] | JSONResponse:
+    try:
+        if any(commit.summary is None for commit in payload.commits):
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": "commits must be agent-compacted before store; call POST /api/context/commits/compact",
+                },
+                status_code=400,
+            )
+        stored = await memory_store.upsert_context(payload)
+        return {"success": True, "data": stored.model_dump(mode="json")}
+    except Exception as exc:
+        logger.exception("Failed to store standup context")
+        return JSONResponse({"success": False, "error": str(exc)}, status_code=400)

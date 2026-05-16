@@ -5,6 +5,27 @@ from tests.conftest import BAD_AUTH
 
 PROTECTED_ROUTES: list[tuple[str, str, dict[str, object] | None]] = [
     ("GET", "/api/context/prefetch?cycle_id=x", None),
+    (
+        "POST",
+        "/api/context/commits/compact",
+        {
+            "sprint_id": "sprint-7",
+            "participant_id": "usr_alice_biometrics",
+            "display_name": "Alice",
+            "commits": [],
+            "has_recent_commits": False,
+        },
+    ),
+    (
+        "POST",
+        "/api/context/store",
+        {
+            "sprint_id": "sprint-7",
+            "participant_id": "usr_alice_biometrics",
+            "commits": [],
+            "blockers": [],
+        },
+    ),
     ("GET", "/api/participants", None),
     (
         "POST",
