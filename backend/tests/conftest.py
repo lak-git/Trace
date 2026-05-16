@@ -20,7 +20,7 @@ from app.model.blocker import Blocker, BlockerSource, BlockerStatus
 from app.model.memory import CompactedSprintMemory, MemoryCompactResponse
 from app.model.participant import Participant, ParticipantRole
 from app.model.plane import CycleUpdateResult, PlaneMember, WorkItemCreateResult
-from app.model.standup import CommitFile, CommitStats, GitCommit
+from app.model.standup import CommitFile, CommitStats, GitCommit, StoredCommit
 
 TEST_SECRET = "test-secret"
 AUTH = {"X-Agent-Secret": TEST_SECRET}
@@ -189,6 +189,25 @@ def gemini_client_mock() -> AsyncMock:
         summary="Compacted standup summary",
         importance=2,
     )
+
+    async def _compact_commits(display_name: str, commits: list[GitCommit], has_recent_commits: bool):  # noqa: ANN001
+        if not commits:
+            return [], f"{display_name} has no commits in the standup window."
+        return (
+            [
+                StoredCommit(
+                    sha=commit.sha,
+                    message=(commit.message or "").split("\n", maxsplit=1)[0].strip(),
+                    url=commit.url,
+                    date=commit.date,
+                    summary=f"Worked on {(commit.message or '').split(chr(10), maxsplit=1)[0].strip()}",
+                )
+                for commit in commits
+            ],
+            f"{display_name} pushed {len(commits)} commit(s) since the last standup.",
+        )
+
+    client.compact_commits.side_effect = _compact_commits
     return client
 
 
