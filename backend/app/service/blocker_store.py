@@ -25,10 +25,14 @@ class BlockerStore:
         if not row.get("last_update"):
             row["last_update"] = payload.description
 
-        res = await self._client.table("blockers").upsert(
-            row,
-            on_conflict="key",
-        ).execute()
+        res = (
+            await self._client.table("blockers")
+            .upsert(
+                row,
+                on_conflict="key",
+            )
+            .execute()
+        )
         saved = res.data[0] if isinstance(res.data, list) else res.data
         return Blocker.model_validate(saved)
 

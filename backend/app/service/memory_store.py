@@ -13,10 +13,14 @@ class MemoryStore:
         self._client = client
 
     async def upsert_memory(self, payload: MemoryUpsert) -> AgentMemory:
-        res = await self._client.table("agent_memory").upsert(
-            payload.model_dump(mode="json"),
-            on_conflict="participant_id,sprint_id,standup_date",
-        ).execute()
+        res = (
+            await self._client.table("agent_memory")
+            .upsert(
+                payload.model_dump(mode="json"),
+                on_conflict="participant_id,sprint_id,standup_date",
+            )
+            .execute()
+        )
         row = res.data[0] if isinstance(res.data, list) else res.data
         return AgentMemory.model_validate(row)
 
@@ -28,31 +32,50 @@ class MemoryStore:
         return [AgentMemory.model_validate(row) for row in (res.data or [])]
 
     async def latest_summary(self, participant_id: str, sprint_id: str) -> str | None:
-        res = await self._client.table("agent_memory").select("*").eq(
-            "participant_id",
-            participant_id,
-        ).eq("sprint_id", sprint_id).eq("stale", False).order(
-            "standup_date",
-            desc=True,
-        ).limit(1).execute()
+        res = (
+            await self._client.table("agent_memory")
+            .select("*")
+            .eq(
+                "participant_id",
+                participant_id,
+            )
+            .eq("sprint_id", sprint_id)
+            .eq("stale", False)
+            .order(
+                "standup_date",
+                desc=True,
+            )
+            .limit(1)
+            .execute()
+        )
         if not res.data:
             return None
         return AgentMemory.model_validate(res.data[0]).summary
 
     async def upsert_context(self, payload: StandupContext) -> StandupContext:
         row = payload.model_dump(mode="json", exclude_none=True)
-        res = await self._client.table("standup_context").upsert(
-            row,
-            on_conflict="sprint_id,participant_id",
-        ).execute()
+        res = (
+            await self._client.table("standup_context")
+            .upsert(
+                row,
+                on_conflict="sprint_id,participant_id",
+            )
+            .execute()
+        )
         saved = res.data[0] if isinstance(res.data, list) else res.data
         return StandupContext.model_validate(saved)
 
     async def list_sprint_facts(self, sprint_id: str) -> list[SprintMemoryFact]:
-        res = await self._client.table("sprint_memory").select("*").eq(
-            "sprint_id",
-            sprint_id,
-        ).order("created_at", desc=False).execute()
+        res = (
+            await self._client.table("sprint_memory")
+            .select("*")
+            .eq(
+                "sprint_id",
+                sprint_id,
+            )
+            .order("created_at", desc=False)
+            .execute()
+        )
         return [SprintMemoryFact.model_validate(row) for row in (res.data or [])]
 
     async def sprint_blob(self, sprint_id: str) -> CompactedSprintMemory:
@@ -74,7 +97,14 @@ class MemoryStore:
         sprint_id: str,
         before_date: date,
     ) -> None:
-        await self._client.table("agent_memory").update({"stale": True}).eq(
-            "participant_id",
-            participant_id,
-        ).eq("sprint_id", sprint_id).lt("standup_date", before_date.isoformat()).execute()
+        await (
+            self._client.table("agent_memory")
+            .update({"stale": True})
+            .eq(
+                "participant_id",
+                participant_id,
+            )
+            .eq("sprint_id", sprint_id)
+            .lt("standup_date", before_date.isoformat())
+            .execute()
+        )

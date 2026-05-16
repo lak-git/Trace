@@ -108,7 +108,9 @@ class PlaneClient:
             members.append(
                 PlaneMember(
                     id=member_id,
-                    display_name=member.get("display_name") or member.get("first_name") or member.get("email"),
+                    display_name=member.get("display_name")
+                    or member.get("first_name")
+                    or member.get("email"),
                     email=member.get("email"),
                 ),
             )
