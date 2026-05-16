@@ -1,0 +1,131 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.AR_REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Install dev dependencies
+        run: uv sync --frozen
+
+      - name: Run ruff check
+        run: uv run ruff check .
+
+      - name: Run ruff format check
+        run: uv run ruff format --check .
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+
+      - name: Install dev dependencies
+        run: uv sync --frozen
+
+      - name: Run pytest
+        run: uv run pytest --tb=short -q
+
+  release:
+    name: Build, Push & Deploy
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+
+    permissions:
+      contents: read
+      id-token: write   # Required for Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Authenticate to GCP via Workload Identity Federation — no long-lived keys
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ vars.CLOUD_RUN_SERVICE }}
+          region: ${{ vars.GCP_REGION }}
+          image: ${{ env.IMAGE }}:${{ github.sha }}
+          # Environment variables that the FastAPI app reads at runtime.
+          # Set these as GitHub Actions variables (non-sensitive) or secrets (sensitive).
+          # Cloud Run also supports Secret Manager references for sensitive values.
+          env_vars: |
+            SUPABASE_URL=${{ vars.SUPABASE_URL }}
+            PLANE_API_BASE_URL=${{ vars.PLANE_API_BASE_URL }}
+            PLANE_WORKSPACE_SLUG=${{ vars.PLANE_WORKSPACE_SLUG }}
+            PLANE_PROJECT_ID=${{ vars.PLANE_PROJECT_ID }}
+            GEMINI_MODEL=${{ vars.GEMINI_MODEL }}
+            STANDUP_CRON=${{ vars.STANDUP_CRON }}
+            STANDUP_TIMEZONE=${{ vars.STANDUP_TIMEZONE }}
+            GITHUB_REPO=${{ vars.GITHUB_REPO }}
+            CORS_ALLOW_ORIGINS=${{ vars.CORS_ALLOW_ORIGINS }}
+          secrets: |
+            SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest
+            PLANE_API_TOKEN=PLANE_API_TOKEN:latest
+            GEMINI_API_KEY=GEMINI_API_KEY:latest
+            AGENT_N8N_WEBHOOK_SECRET=AGENT_N8N_WEBHOOK_SECRET:latest
+            GITHUB_TOKEN=GITHUB_TOKEN:latest

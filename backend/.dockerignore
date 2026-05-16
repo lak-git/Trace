@@ -1,0 +1,38 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# uv cache
+.uv/
+
+# Secrets — never bake into the image
+.env.agent
+.env*
+
+# Development/test artefacts
+tests/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Database migrations — applied externally via Supabase dashboard or CLI
+migrations/
+
+# Version control
+.git/
+.github/
+.gitignore
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo
