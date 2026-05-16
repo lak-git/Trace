@@ -8,13 +8,14 @@ alwaysApply: false
 # Agent Backend Rules (Python / FastAPI)
 
 ## Stack
-- Python 3.11+
+- Python 3.12+
 - FastAPI (async web framework)
 - httpx (async HTTP — use this, NOT requests library)
 - tenacity (retry logic)
-- Pydantic v2 (data validation)
+- Pydantic v2 + pydantic-settings (data validation + config)
 - Ruff (linting and formatting — not Black, not Flake8)
-- asyncpg / sqlalchemy[asyncio] (database)
+- `supabase>=2.4` async client for all DB access (no asyncpg, no SQLAlchemy).
+  See [.cursor/rules/500-database.mdc](.cursor/rules/500-database.mdc).
 
 ## Type Safety
 - All function signatures must have type hints. No untyped signatures.
@@ -70,10 +71,12 @@ Key patterns used by the agent:
   with `{"description": "Daily Standup YYYY-MM-DD:\n- @alice: ..."}`
 
 ## Memory Store
-- Agent memory is stored as structured JSON in Supabase.
-- Schema is defined in `model/memory_schema.py`.
-- Memory updates are idempotent — always upsert, never blind insert.
-- Stale memory (no reference in last 3 standups) must be marked for expiry, not deleted immediately.
+- Agent memory is stored in Supabase via the async `supabase` SDK.
+- Pydantic models for memory shapes live in `backend/app/model/memory.py`.
+- Memory updates are idempotent — always upsert with the explicit `on_conflict` key
+  (`participant_id,sprint_id,standup_date`). Never blind insert.
+- Stale memory (no reference in last 3 standups) is marked `stale=true` for expiry,
+  not deleted immediately.
 
 ## Webhook Authentication
 - All n8n-facing endpoints authenticate via shared secret:
@@ -84,7 +87,8 @@ Key patterns used by the agent:
   ```
 
 ## Gemini API
-- Use `google-generativeai` Python SDK.
+- Use the `google-genai` Python SDK (the unified Google AI SDK; not the legacy
+  `google-generativeai` package).
 - Use `GEMINI_MODEL` env var (e.g. `gemini-3.1-pro` or `gemini-3-flash`).
 - Always set `generation_config` with explicit `max_output_tokens` — never let it run unbounded.
 - API key comes from `GEMINI_API_KEY` env var only.

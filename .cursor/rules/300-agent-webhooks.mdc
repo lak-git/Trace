@@ -64,10 +64,19 @@ Never return raw objects or lists at the top level.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/api/context/prefetch` | Fetch members+commits+blockers; store compiled context |
-| `POST` | `/api/memory/compact` | Compact raw transcript via Gemini; store |
-| `POST` | `/api/memory/upsert` | Upsert memory entry |
-| `GET` | `/api/memory/{sprint_id}` | Load sprint memory |
-| `POST` | `/api/plane/cycle-update` | Append standup summary to Plane cycle |
-| `POST` | `/api/blocker/report` | Report a blocker (from webhook) |
-| `GET` | `/api/blockers/active` | Get active blockers for a sprint |
+| `GET` | `/api/health` | Health check (no auth) |
+| `POST` | `/api/participants` | Seed/upsert a participant (Plane UUID -> role + github_login) |
+| `GET` | `/api/participants` | List active participants |
+| `GET` | `/api/context/prefetch` | Fetch members+commits+blockers; store compiled context per role |
+| `POST` | `/api/memory/compact` | Compact raw transcript via Gemini; return summary |
+| `POST` | `/api/memory/upsert` | Upsert memory entry (idempotent on participant+sprint+date) |
+| `GET` | `/api/memory/{sprint_id}` | Load sprint memory as a single compacted JSON blob |
+| `POST` | `/api/plane/cycle-update` | Append standup summary to Plane cycle description |
+| `POST` | `/api/blocker/report` | Report a new blocker (from webhook or standup) |
+| `POST` | `/api/blocker/{key}/update` | Append a textual update; bumps `updated_at` |
+| `POST` | `/api/blocker/{key}/resolve` | Mark blocker resolved |
+| `GET` | `/api/blockers/active` | Get active blockers (optionally scoped by `sprint_id`) |
+
+`{key}` is the stable slug stored on `blockers.key` (e.g. `bob-ci-flakiness`).
+The n8n GitHub-webhook workflow parses `[BLOCKED] <desc>` / `[BLOCKER:<key>] <update>` /
+`[RESOLVED:<key>]` patterns in commit messages and calls the matching endpoint.

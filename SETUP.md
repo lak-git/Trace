@@ -40,46 +40,20 @@ features/*    — individual feature branches
 
 1. Go to https://supabase.com → Create new project
 2. Region: **ap-southeast-1** (Singapore)
-3. After creation, go to Project Settings → Database → Connection string
-4. Copy the **pooler** connection string (port 5432)
-5. Save for `.env.agent`
+3. After creation, go to Project Settings → API and copy:
+   - **Project URL** → `SUPABASE_URL`
+   - **anon public** key → `SUPABASE_ANON_KEY`
+   - **service_role** key → `SUPABASE_SERVICE_ROLE_KEY` (BACKEND ONLY — keep secret)
+4. Go to Project Settings → Database → Connection pooling, copy the **pooler**
+   connection string (port 5432) → `SUPABASE_DATABASE_URL` (used by n8n's
+   Postgres node, not by the backend).
+5. Open the SQL editor and run [backend/migrations/001_initial.sql](backend/migrations/001_initial.sql)
+   in one go. It creates all five tables (`participants`, `standup_context`,
+   `agent_memory`, `blockers`, `sprint_memory`) with the required UNIQUE
+   constraints, indexes, and the `blockers.updated_at` trigger.
 
-Required tables (create these after your project is ready):
-
-```sql
-CREATE TABLE standup_context (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sprint_id TEXT NOT NULL,
-  participant_id TEXT NOT NULL,
-  commits JSONB DEFAULT '[]',
-  blockers JSONB DEFAULT '[]',
-  last_summary TEXT,
-  compiled_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE agent_memory (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  participant_id TEXT NOT NULL,
-  sprint_id TEXT NOT NULL,
-  standup_date DATE NOT NULL,
-  summary TEXT NOT NULL,
-  importance INTEGER DEFAULT 1,
-  stale BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE blockers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  participant_id TEXT NOT NULL,
-  description TEXT NOT NULL,
-  status TEXT DEFAULT 'active',
-  source TEXT DEFAULT 'manual',
-  github_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  resolved_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
+RLS is intentionally NOT enabled on agent tables for the MVP (the backend uses
+the service role key and n8n uses a direct Postgres connection, both bypass RLS).
 
 ---
 
@@ -128,14 +102,17 @@ All three team members push commits to this repo during the demo sprint.
 ## Step 6 — Environment Variables
 
 ```bash
-cp backend/.env.example .env.agent
+cp .env.agent.example .env.agent
 ```
 
 Edit `.env.agent` with your real values:
 
 | Variable | Where to Get It |
 |---|---|
-| `SUPABASE_DATABASE_URL` | Supabase → Project Settings → Database |
+| `SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
+| `SUPABASE_ANON_KEY` | Supabase → Project Settings → API → `anon` public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` key (BACKEND ONLY) |
+| `SUPABASE_DATABASE_URL` | Supabase → Project Settings → Database → Connection pooling (port 5432) |
 | `PLANE_API_BASE_URL` | Use `https://api.plane.so/api/v1` |
 | `PLANE_API_TOKEN` | Plane → Profile Settings → Personal Access Tokens |
 | `PLANE_WORKSPACE_SLUG` | From your Plane workspace URL |
