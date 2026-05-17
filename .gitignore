@@ -1,3 +1,4 @@
 .env
 .env.local
 .env.agent
+.DS_Store

@@ -1,0 +1,172 @@
+{
+  "name": "sprint-planning",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "17e9e8b0-1828-4384-9682-58d34ed2e31b",
+      "name": "When chat message received",
+      "webhookId": "b127e456-ffb0-4380-88c1-a0421204a599"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an expert AI Scrum Master assistant running a daily standup segment for one team member.\n\nYour job: capture what they said, then save it with your memory tool. Never mention tools, APIs, or database schemas.\n\nPROTOCOL:\n1. You already know (or were given) this session context — do not ask again unless missing:\n   - participant_id: stable id for this member (e.g. Plane user id or seeded id like \"usr_alice\")\n   - sprint_id: current cycle id (e.g. \"sprint-7\")\n   - standup_date: today's standup date in ISO format YYYY-MM-DD (use the session date; if unknown, ask once)\n2. Conduct a short standup for this member (yesterday / today / blockers). One clarifying question max if needed.\n3. Distill their update into one concise summary string (1–3 sentences, past tense, factual). No bullet lists in summary.\n4. Call \"Upsert Memory Tool\" exactly once with this JSON shape:\n   {\n     \"participant_id\": \"<required string>\",\n     \"sprint_id\": \"<required string>\",\n     \"standup_date\": \"<required YYYY-MM-DD>\",\n     \"summary\": \"<required string>\",\n     \"importance\": <optional integer 1-3; default 1>\n   }\n   importance: 1 = routine, 2 = important, 3 = blocker/escalation. Only set 2 or 3 when clearly warranted.\n5. Confirm briefly what you saved (in natural language only). Do not read back raw JSON or field names.\n\nCRITICAL:\n- All four fields participant_id, sprint_id, standup_date, summary are mandatory before calling the tool.\n- If participant_id or sprint_id is missing, ask the Scrum Master once, then proceed.\n- standup_date must be YYYY-MM-DD only.\n- One tool call per member per standup day (do not split one person into multiple upserts unless they are clearly separate days)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        272,
+        0
+      ],
+      "id": "7bd5d74b-4a63-4e1b-b73d-2ce9264fe217",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        336
+      ],
+      "id": "b0d377fe-1ad4-44a3-967c-0954f2131ed3",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "WfnUZiDmzgqNyfIu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        368,
+        336
+      ],
+      "id": "3da5f82a-8bf6-47b5-8940-8a95afcf606f",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "content": "Are you working on this?\n\nI can move on, use this:\n\nGET    /api/health\nGET    /api/participants\nPOST   /api/participants\nGET    /api/context/prefetch\nPOST   /api/context/prefetch\nPOST   /api/memory/compact\nPOST   /api/memory/upsert\nGET    /api/memory/{sprint_id}\nPOST   /api/plane/cycle-update\nPOST   /api/plane/work-item\nPOST   /api/blocker/report\nPOST   /api/blocker/{key}/update\nPOST   /api/blocker/{key}/resolve\nGET    /api/blockers/active"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        736,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "c7141879-7e0a-4af0-bd9a-00793fe90e70",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool to save a key fact, decision, boundary, or goal discovered during the sprint planning session. Call this tool as soon as a concrete fact or goal is confirmed by the Scrum Master.",
+        "method": "POST",
+        "url": "={{ $vars.BACKEND_URL }}/api/memory/upsert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Agent-Secret",
+              "value": "={{ $vars.AGENT_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"participant_id\": {{ JSON.stringify($fromAI('participant_id', 'The participant identifier, e.g. usr_alice or Plane user UUID')) }},\n  \"sprint_id\": {{ JSON.stringify($fromAI('sprint_id', 'The active sprint identifier, e.g. sprint-7')) }},\n  \"standup_date\": {{ JSON.stringify($fromAI('standup_date', 'Standup date in ISO format YYYY-MM-DD, e.g. 2026-05-16')) }},\n  \"summary\": {{ JSON.stringify($fromAI('summary', 'Compacted standup segment summary for this participant')) }},\n  \"importance\": {{ $fromAI('importance', 'Memory importance 1-3: 1=routine, 2=important, 3=blocker', 'number') }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        544,
+        336
+      ],
+      "id": "30c52b37-1477-4079-b6ff-47e1578fe76a",
+      "name": "Upsert Sprint Memory Tool"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Sprint Memory Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "66b91e0e-ca42-464a-9787-7843e009125d",
+  "meta": {
+    "instanceId": "2a6210ed76df60ce4d0077186bc8260479e5ef362a2c0f358d5e3ccbf249ed35"
+  },
+  "id": "fQb4JKU0qLMmk5xA",
+  "tags": []
+}
