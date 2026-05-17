@@ -32,7 +32,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1.1,
       "position": [
-        752,
+        744,
         224
       ],
       "id": "adb0c7c5-6b21-477f-83ec-210140cdd6da",
@@ -183,7 +183,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "7c37f29f-d3c7-4f86-9d4d-1fd7506b121d",
+  "versionId": "63de4301-b38f-46c2-b1e4-7ae25be83dc2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2a6210ed76df60ce4d0077186bc8260479e5ef362a2c0f358d5e3ccbf249ed35"
